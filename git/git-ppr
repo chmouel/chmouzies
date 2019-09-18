@@ -1,0 +1,47 @@
+#!/bin/bash
+set -ex
+TMP=$(mktemp /tmp/.mm.XXXXXX)
+clean() { rm -f ${TMP}; }
+trap clean EXIT
+
+BASE_REMOTE=${1}
+USER_REMOTE=${2}
+
+[[ -z ${BASE_REMOTE} ]] && {
+    echo "No base remote specified, will be using *rigin*"
+    sleep 3
+    BASE_REMOTE=origin
+}
+
+[[ -z ${USER_REMOTE} ]] && {
+    echo "No remote specified, will be using $(whoami)"
+    sleep 1
+    BASE_REMOTE=$(whoami)
+}
+
+
+BASE_REPO=$(git remote get-url ${BASE_REMOTE}|sed 's,\(https://github.com/\|git@github.com:\),,')
+USER_REPO=$(git remote get-url ${USER_REMOTE}|sed 's,\(https://github.com/\|git@github.com:\),,')
+
+[[ -z ${BASE_REPO} ]] && {
+    echo "Could not find information about Base repo: ${BASE_REMOTE}"
+    exit 1
+}
+
+[[ -z ${USER_REPO} ]] && {
+    echo "Could not find information about User repo: ${USER_REPO}"
+    exit 1
+}
+
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+REMOTE_BRANCH=$(git ls-remote --heads ${BASE_REMOTE}|sed 's,.*refs/heads/,,'|fzf -1 --no-clear --height 10 || true)
+[[ -z ${REMOTE_BRANCH} ]] && {
+    echo "Could not find a remote branch to push to..."
+    exit 1
+}
+
+echo "About to push Branch: ${CURRENT_BRANCH} to ${USER_REMOTE} :";sleep 1;echo
+git push -u ${CURRENT_BRANCH} ${USER_REMOTE}
+
+hub pull-request -b ${BASE_REPO}:${REMOTE_BRANCH} -h ${USER_REPO}:${CURRENT_BRANCH}

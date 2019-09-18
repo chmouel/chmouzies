@@ -1,0 +1,13 @@
+#!/bin/bash
+set -e
+
+# You need:  git config --add remote.origin.fetch +refs/pull/*/head:refs/remotes/origin/pull/*
+git fetch origin >/dev/null 2>/dev/null
+P=$(git branch -r --contains HEAD | sed -n '/origin\/pull/ { s/[ ]*origin\/pull\///;p;}')
+
+if [[ -z ${P} ]]; then
+    echo "noip"
+    exit 1
+fi
+
+hub browse -u -- pull/${P}

@@ -1,0 +1,22 @@
+#!/bin/bash
+set -e
+
+TITLE="$1"
+[[ -z ${TITLE} ]] && {
+	echo need title
+	exit 1
+}
+REPO="$(basename $(dirname $(git remote get-url origin))|sed 's/.*://')/$(basename $(git remote get-url origin)|sed 's/\.git//')"
+ISSUE=$(github-issue-cli -t "$1" ${REPO})
+ISSUENUMBER=$(basename ${ISSUE})
+
+COMMITMESSAGE="Fixes #${ISSUENUMBER} ${TITLE/Fix /}"
+
+branchname=$(echo $TITLE|gsed -r 's/(.*)/\L\1/;s/ /-/g')
+branchname=$(echo $branchname|gawk -v len=25 '{ if (length($0) > len) print substr($0, 1, len-3); else print; }')
+[[ $branchname == *- ]] && branchname=$(echo ${branchname}| sed 's/-$//')
+
+git fetch origin
+git checkout -b ${branchname} origin/master
+
+echo ${COMMITMESSAGE} > .git/committile

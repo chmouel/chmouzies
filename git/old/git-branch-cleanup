@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+set -e
+
+CLOSED_ISSUES=$(hub issue -s closed -f "%I ")
+ISSUE_BRANCHES=$(git branch -l|grep issue-)
+
+current=$(git rev-parse --abbrev-ref HEAD)
+if [[ ${current} != "master" ]];then
+    echo "You really need to be on master for this"
+    exit 1
+fi
+
+hub sync
+
+for closed in ${CLOSED_ISSUES};do
+    for branch in ${ISSUE_BRANCHES};do
+        if [[ ${branch} == issue-${closed}* ]];then
+            read -n1 -e -p "Delete ${branch}? [Ny]: " REPLY
+            [[ ${REPLY,,} != "y" ]] && continue
+            git branch -d ${branch}
+            set -x
+            A=$(/bin/ls $(git rev-parse --show-toplevel)/.git/issues/${closed}* 2>/dev/null || true)
+            [[ -z ${A} ]] && { set +x; continue ;}
+
+            content=$(grep "Downstream" ${A}|sed 's/Downstream: //' || true)
+            rm -vf ${A}
+
+            [[ -z ${content} ]] && { set +x; continue ;}
+            github-project-cli move_card -p=fabric8io -b "Build Team" -c "In Progress" -dc "Done" -r ".*${content}"
+            set +x
+        fi
+    done
+done

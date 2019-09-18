@@ -1,0 +1,1 @@
+git for-each-ref --sort=-committerdate  --count=10 --format='%(align:1,20)%(color:bold yellow)%(refname:short) %(color:reset)%(committerdate:relative)%(end) %(align:50,right) %(color:white)%(upstream:lstrip=2) -- %(color:italic)%(authoremail) %(contents:subject)%(end)' refs/heads/

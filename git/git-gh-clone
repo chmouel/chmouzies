@@ -1,0 +1,53 @@
+#!/bin/bash
+set -e
+set -f
+
+[[ $1 == -f ]] && { fork=true; shift; }
+[[ $1 == -1 ]] && { single="--depth=1"; shift;}
+remotebranch=chmouel
+
+repo=$1
+if [[ $1 == https://github.com* ]]; then
+  repo=${repo/https:\/\/github.com\//}
+elif [[ $1 == github.com/* ]]; then
+  repo=https://${repo}
+fi
+
+[[ -z ${repo} ]] && {
+  echo "no repo specificed"
+  exit 1
+}
+
+shift
+
+gitargs=""
+for i in $@; do
+  [[ $i == "-f" ]] && {
+    fork=true
+    continue
+  }
+  gitargs+="$i "
+done
+
+org=$(echo ${repo} | awk -F/ '{print $1}')
+repo=$(echo ${repo} | awk -F/ '{print $2}')
+bdir=$GOPATH/src/github.com/${org}
+
+if [[ ! -d ${bdir}/${repo} ]]; then
+  [[ -d $bdir ]] || mkdir -p ${bdir}
+  cd ${bdir}
+  git clone ${single} ${gitargs} https://github.com/${org}/${repo}
+fi
+
+cd ${bdir}/${repo}
+
+if [[ -n ${fork} && ${org} != chmouel ]]; then
+  if ! git remote get-url chmouel >/dev/null 2>/dev/null; then
+    cd ${bdir}/${repo}
+    hub fork || true
+     git remote set-url ${remotebranch} $(git remote get-url ${remotebranch}|sed 's,https://github.com/,git@github.com:,')
+  fi
+ else
+    git remote set-url origin $(git remote get-url origin|sed 's,https://github.com/,git@github.com:,')
+fi
+echo ${bdir}/${repo}|pbcopy

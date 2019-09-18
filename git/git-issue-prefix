@@ -1,0 +1,28 @@
+#!/bin/bash
+titleonly=
+if [[ $1 == "-t" ]];then
+    titleonly=t
+fi
+
+title=$(osascript -e 'tell application "Firefox" to return name of windows as text')
+number=$(echo $title|gsed -r 's/.* Issue #([0-9]+) .*/\1/;')
+[[ ${title} =~ .*Issue\ \#[0-9]{3,} ]] || { echo "I could not find a github Issue ###"; exit 1;}
+if [[ ${titleonly} ]];then
+    echo $title|gsed -r 's/(.*)...Issue #[0-9]+ .*/\1/;'
+    echo
+    echo "Fixes #$number"
+    exit
+fi
+prefix=$(echo $title|gsed -r 's/(.*)...Issue #[0-9]+ .*/\L\1/;s/ /-/g')
+
+prefix=$(echo $prefix|gawk -v len=25 '{ if (length($0) > len) print substr($0, 1, len-3); else print; }')
+[[ $prefix == *- ]] && prefix=$(echo ${prefix}| sed 's/-$//')
+
+
+if [[ -z ${title} || -z ${number} ]];then
+    echo "Can't get title or number"
+    exit
+fi
+
+
+echo issue-${number}-${prefix}

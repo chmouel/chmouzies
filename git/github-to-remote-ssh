@@ -1,0 +1,11 @@
+#!/bin/bash
+branch=$1
+[[ -z ${1} ]] && {
+    echo -n "I am about to use the branch 'origin' pointing to '$(git remote get-url origin)'... [5s wait or press ENTER]"
+    read -t5;echo
+    branch=origin
+}
+echo "Changing branch '${branch}' pointing to '$(git remote get-url ${branch})'"
+git remote set-url ${branch} $(git remote get-url ${branch}|sed 's,https://github.com/,git@github.com:,')
+
+echo "Branch '${branch}' became $(git remote get-url ${branch})"

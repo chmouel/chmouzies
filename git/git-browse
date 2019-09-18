@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+function readlinkf() {
+    python -c 'import os,sys;print os.path.realpath(sys.argv[1])' $1
+}
+
+
+SHA=
+if [[ $1 == "-m" ]];then
+    SHA=master
+    shift
+fi
+
+set -e
+UPSTREAM_NAME=$(git config forge.remote 2>/dev/null || echo origin)
+ORIGIN_REMOTE=$(git config remote.${UPSTREAM_NAME}.url)
+ORIGIN_REMOTE=${ORIGIN_REMOTE/.git/}
+
+if [[ ${ORIGIN_REMOTE} =~ git@gisthub.com:([0-9]+) ]];then
+    url=https://gist.github.com/${BASH_REMATCH[1]}
+    echo $url
+    type -p open >/dev/null 2>/dev/null && open $url
+    exit
+fi
+
+
+if [[ ${ORIGIN_REMOTE} != git@github.com* && ${ORIGIN_REMOTE} != http*github.com* ]];then
+    exit
+fi
+
+if [[ ${ORIGIN_REMOTE} == git@github.com* ]];then
+    ORIGIN_REMOTE=${ORIGIN_REMOTE/git@github.com:/https:\/\/github.com\/}
+fi
+
+URL=${ORIGIN_REMOTE}
+
+LINE=
+if [[ -n ${2} ]];then
+    LINE="#L${2}"
+    if [[ -n ${3} ]];then
+        LINE=${LINE}-L${3}
+    fi
+fi
+
+ARG=$1
+if [[ -e ${ARG} ]];then
+
+    if [[ -z ${SHA} ]];then
+        BRANCH=$(git rev-parse --short HEAD)
+    fi
+
+    base_repo=$(git rev-parse --show-toplevel)
+    ffile=$(readlinkf $1)
+    ARG=${ffile/$base_repo/}
+    #http://stackoverflow.com/a/20195713/145125
+    ARG=${ARG#?}
+    URL=${URL}/blob/${BRANCH}/${ARG}${LINE}
+elif [[ -n ${ARG} ]];then
+    URL=${ORIGIN_REMOTE}/commit/${ARG}${LINE}
+else
+    URL=${ORIGIN_REMOTE}
+fi
+
+echo ${URL}
+
+if [[ -x /usr/bin/open ]];then
+    /usr/bin/open ${URL}
+fi

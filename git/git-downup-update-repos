@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -e
+
+git diff --no-ext-diff --quiet --exit-code >/dev/null  || { echo "This does not seem to be a github repo"; exit 1 ;}
+currentbranch=$(git symbolic-ref -q HEAD);currentbranch=${currentbranch#refs/heads/}
+changed=$(git status --porcelain)
+
+for remote in openshift upstream;do
+    git remote |grep -q ${remote}  || { echo "you need a ${remote} remote"; exit 1 ;}
+    git fetch -a --tags ${remote}
+done
+
+if [[ -n ${changed} ]];then
+    git stash save -a -u "Staged before running an update $(date)"
+fi
+
+for branch in release-next master;do
+    git checkout openshift-${branch}
+    git reset --hard openshift/${branch}
+done
+
+git checkout master
+git reset --hard upstream/master
+
+git checkout ${currentbranch}
+
+if [[ -n ${changed} ]];then
+    git stash pop
+fi
