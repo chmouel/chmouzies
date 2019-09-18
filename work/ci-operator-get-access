@@ -1,12 +1,13 @@
 #!/bin/bash
 # Get Latest ci-op cluster access
 # Chmouel Boudjnah <chmouel@chmouel.com>
+set -e
+
 JOB_NAME=${1:-"e2e-"}
 KOUTPUT="/tmp/ci-operator-kubeconfig"
 
 ci_prj=$(oc get project -o go-template='{{range .items}}{{.metadata.creationTimestamp}} {{.metadata.name}}{{"\n"}}{{end}}'|grep ci-op|sort -n|tail -1|sed 's/.* //')
 
-set -e
 TMP=$(mktemp /tmp/.mm.XXXXXX)
 clean() { rm -f ${TMP}; }
 trap clean EXIT
