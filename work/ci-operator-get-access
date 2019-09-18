@@ -3,10 +3,9 @@
 # Chmouel Boudjnah <chmouel@chmouel.com>
 set -e
 
-JOB_NAME=${1:-"e2e-"}
-KOUTPUT="/tmp/ci-operator-kubeconfig"
 
-ci_prj=$(oc get project -o go-template='{{range .items}}{{.metadata.creationTimestamp}} {{.metadata.name}}{{"\n"}}{{end}}'|grep ci-op|sort -n|tail -1|sed 's/.* //')
+JOB_NAME=${1:-"e2e-aws-ocp-41"}
+KOUTPUT="${HOME}/.kube/config.ci-operator"
 
 TMP=$(mktemp /tmp/.mm.XXXXXX)
 clean() { rm -f ${TMP}; }
@@ -47,20 +46,37 @@ function wait_and_log() {
     done
 }
 
-echo -n "Waiting pod with prefix '${JOB_NAME}' to comes up: "
+oc whoami --show-server=true|grep -q api.ci.openshift.org || {
+    echo "This is designed to be running on ci.openshift"
+    echo "Go to https://api.ci.openshift.org and get a token from the 'Copy Login command' top right menu"
+    exit 1
+}
+
+_cnt=0
+echo "Waiting for pods with prefix ${JOB_NAME} to comes up.."
 while True;do
-    e2e_test_pod=$(oc get pod -n ${ci_prj} -o name|grep "^pod/${JOB_NAME}" || true)
+    _ciprojects=$(oc get project|grep '^ci-op'|sed 's/ .*//' || true)
+    for _cip in ${_ciprojects};do
+        e2e_test_pod=$(oc get pod -n ${_cip} -o name|grep "^pod/${JOB_NAME}" || true)
+        [[ -n ${e2e_test_pod} ]] && {
+            ci_prj=${_cip}
+            break
+        }
+    done
     [[ -n ${e2e_test_pod} ]] && break
+    [[ ${_cnt} == 500 ]] && { echo "We can't find no pod with prefix ${JOB_NAME}"; exit 1 ;}
+    (( _cnt++ ))
     sleep 3
 done
-echo "got ${e2e_test_pod}.."
+echo "Found it in namespace ${ci_prj}...."
 
 wait_and_log ${ci_prj} ${e2e_test_pod} setup "Access the OpenShift web-console here.*Login to the console with user.*"
 
 oc rsh -n ${ci_prj} -c lease ${e2e_test_pod} cat /tmp/artifacts/installer/auth/kubeconfig > ${KOUTPUT}
 export KUBECONFIG=${KOUTPUT}
+echo export KUBECONFIG=${KOUTPUT}
 
-
+# Probably knative/tekton specific so you may not need it so fel free to rip this off,
 for p in $(oc get project -o name|grep arendelle|sed 's/.*\///');do
     output=$(oc get pod -o name -n $p 2>/dev/null)
     [[ -n ${output} ]] && {
@@ -69,5 +85,3 @@ for p in $(oc get project -o name|grep arendelle|sed 's/.*\///');do
         break
     }
 done
-
-echo export KUBECONFIG=${KOUTPUT}
