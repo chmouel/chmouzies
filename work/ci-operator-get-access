@@ -1,0 +1,60 @@
+#!/bin/bash
+# Get Latest ci-op cluster access
+# Chmouel Boudjnah <chmouel@chmouel.com>
+JOB_NAME=${1:-"e2e-"}
+KOUTPUT="/tmp/ci-operator-kubeconfig"
+
+ci_prj=$(oc get project -o go-template='{{range .items}}{{.metadata.creationTimestamp}} {{.metadata.name}}{{"\n"}}{{end}}'|grep ci-op|sort -n|tail -1|sed 's/.* //')
+
+set -e
+TMP=$(mktemp /tmp/.mm.XXXXXX)
+clean() { rm -f ${TMP}; }
+trap clean EXIT
+
+function wait_and_log() {
+    local ns=${1}
+    local pod=${2}
+    local phase=${3}
+    local grepend="${4}"
+    local previous_log= log= diff=
+
+    while True;do
+        [[ $(oc get pod ${pod/pod\/} -n ${ns} -o template="{{ .status.phase }}") != "Running" ]] && break
+        log="$(oc logs -n ${ns} ${pod} -c ${phase} --tail=10)"
+
+        [[ "${log}" == "${previous_log}" ]] && { sleep 2;continue ;}
+
+        finis=$(echo ${log}|egrep -Eo "${grepend}")
+        [[ -n ${finis} ]] && {
+            echo "${finis}" > ${TMP}
+            return
+        }
+
+        if [[ -n ${previous_log} ]];then
+            diff="$(diff -u <(echo "${previous_log}") <(echo "$log") || true)"
+            echo "${diff}" | sed -n '/^+++/d;/^\+/ {s/^.//;p;}'
+        else
+            echo "${log}"
+        fi
+        previous_log="${log}"
+        sleep 1
+    done
+}
+
+e2e_test_pod=$(oc get pod -n ${ci_prj} -o name|grep "^pod/${JOB_NAME}")
+wait_and_log ${ci_prj} ${e2e_test_pod} setup "Access the OpenShift web-console here.*Login to the console with user.*"
+
+oc rsh -n ${ci_prj} -c lease ${e2e_test_pod} cat /tmp/artifacts/installer/auth/kubeconfig > ${KOUTPUT}
+export KUBECONFIG=${KOUTPUT}
+
+
+for p in $(oc get project -o name|grep arendelle|sed 's/.*\///');do
+    output=$(oc get pod -o name -n $p 2>/dev/null)
+    [[ -n ${output} ]] && {
+        oc project ${p}
+        oc describe "${output}"
+        break
+    }
+done
+
+echo export KUBECONFIG=${KOUTPUT}
