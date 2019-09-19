@@ -18,7 +18,9 @@ import argparse
 import json
 import re
 import subprocess
+import datetime
 import sys
+import time
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--last", '-l', action="store_true", default=False)
@@ -84,29 +86,45 @@ def get_log_container(namespace,
                       finish_on=None,
                       follow=False,
                       highlights=[]):
-    p = subprocess.run(
-        f"oc logs -n {namespace} {pod_name} -c {container_name}".split(" "),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE)
-    output = p.stdout.decode().strip()
-    ret = []
-    for line in output.split("\n"):
-        _add = True
-        for reg, colour in highlights:
-            m = re.match(reg, line)
-            if m:
-                ret.append(termcolor.colored(line, colour, attrs=['bold']))
-                _add = False
-                break
-        if _add:
-            ret.append(line)
-    return "\n".join(ret)
+    since = ""
+    while True:
+        cmd = f"oc logs -n {namespace} {pod_name} -c {container_name}"
+        marktime = datetime.datetime.now().isoformat("T") + "Z"
+        if since:
+            cmd += " " + since
+        p = subprocess.run(
+            cmd.split(" "), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        output = p.stdout.decode().strip()
+        if not output:
+            time.sleep(5)
+            continue
+        ret = []
+        for line in output.split("\n"):
+            _add = True
+            for reg, colour in highlights:
+                m = re.match(reg, line)
+                if m:
+                    ret.append(termcolor.colored(line, colour, attrs=['bold']))
+                    _add = False
+                    break
+            if _add:
+                ret.append(line)
+
+        print("\n".join(ret))
+
+        if follow:
+            since = f"--since-time={marktime}"
+            time.sleep(5)
+        else:
+            return
 
 
-print(
-    get_log_container(
-        "ci",
-        pod_name,
-        "test",
-        highlights=[(".*completed successfully.*", "green"),
-                    (".*Creating namespace.*", "yellow")]))
+get_log_container(
+    "ci",
+    pod_name,
+    "test",
+    follow=True,
+    highlights=[(".*Resolved source https.*", "cyan"),
+                (".*Build.*succeeded after \d+", "magenta"),
+                (".*completed successfully.*", "green"),
+                (".*Creating namespace.*", "yellow")])
