@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
-git diff --no-ext-diff --quiet --exit-code >/dev/null  || { echo "This does not seem to be a github repo"; exit 1 ;}
+git rev-parse --git-dir >/dev/null || { echo "This does not seem to be a github repo"; exit 1 ;}
+
 currentbranch=$(git symbolic-ref -q HEAD);currentbranch=${currentbranch#refs/heads/}
 changed=$(git status --porcelain)
 
