@@ -20,8 +20,14 @@ function wait_and_log() {
 
     while True;do
         _s=$(oc get pod ${pod/pod\/} -n ${ns} -o template="{{ .status.phase }}")
+        [[ ${_s} == "Terminated" ]] && {
+            log="$(oc logs -n ${ns} ${pod} -c ${phase} --tail=10)"
+            echo "${log}" | tail ${TMP}
+            break
+        }
+
         [[ ${_s} != "Running" ]] && {
-            echo "Waiting pod ${pod/pod\/} to come currently in '${_s}' phase "
+            echo "Waiting pod ${pod/pod\/} to come in '${_s}' phase "
             sleep 2
             continue
         }
@@ -68,14 +74,19 @@ while True;do
     (( _cnt++ ))
     sleep 3
 done
-echo "Found it in namespace ${ci_prj}...."
+echo "Found it in namespace ${ci_prj} ...."
 
 wait_and_log ${ci_prj} ${e2e_test_pod} setup "Access the OpenShift web-console here.*Login to the console with user.*"
 
 oc rsh -n ${ci_prj} -c lease ${e2e_test_pod} cat /tmp/artifacts/installer/auth/kubeconfig > ${KOUTPUT}
-export KUBECONFIG=${KOUTPUT}
+echo "Meanwhile Here is the kubeconfig:"
 echo export KUBECONFIG=${KOUTPUT}
 
+wait_and_log ${ci_prj} ${e2e_test_pod} "test" "Access the OpenShift web-console here.*Login to the console with user.*"
+
+echo export KUBECONFIG=${KOUTPUT}
+
+export KUBECONFIG=${KOUTPUT}
 # Probably knative/tekton specific so you may not need it so fel free to rip this off,
 for p in $(oc get project -o name|grep arendelle|sed 's/.*\///');do
     output=$(oc get pod -o name -n $p 2>/dev/null)
