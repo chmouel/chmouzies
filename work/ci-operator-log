@@ -13,21 +13,36 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
+import termcolor
+import argparse
 import json
+import re
 import subprocess
 import sys
-import os
-import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--last", '-l', action="store_true", default=False)
 args = parser.parse_args(sys.argv[1:])
 
+shell = subprocess.run(
+    "oc whoami --show-server=true".split(" "),
+    stderr=subprocess.PIPE,
+    stdout=subprocess.PIPE)
+
+if shell.returncode != 0 or 'api.ci.openshift.org' not in shell.stdout.decode(
+):
+    print("""
+          This script has been designed to work on the ci.openshift server Go to
+          https://api.ci.openshift.org and get a token from the 'Copy Login
+          command' top right hamburger menu.
+          """)
+    sys.exit(1)
+
 command = [
     "oc", "get", "pod", "-n", "ci", "--sort-by=.metadata.creationTimestamp",
     "-l", "prow.k8s.io/refs.repo=tektoncd-pipeline", "-ojson"
 ]
-#command = ["cat", "/tmp/r.json"]
+
 shell = subprocess.run(command, stdout=subprocess.PIPE)
 ciruns = json.loads(shell.stdout)
 ret = []
@@ -58,6 +73,40 @@ else:
     if p.returncode != 0:
         sys.exit(1)
     r = p.stdout.decode().strip()
-container_name = r.split(" ")[-1]
+
+pod_name = r.split(" ")[-1]
 job_type = r.split(" ")[-3]
-os.system(f"oc logs -n ci {container_name} -c test")
+
+
+def get_log_container(namespace,
+                      pod_name,
+                      container_name,
+                      finish_on=None,
+                      follow=False,
+                      highlights=[]):
+    p = subprocess.run(
+        f"oc logs -n {namespace} {pod_name} -c {container_name}".split(" "),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE)
+    output = p.stdout.decode().strip()
+    ret = []
+    for line in output.split("\n"):
+        _add = True
+        for reg, colour in highlights:
+            m = re.match(reg, line)
+            if m:
+                ret.append(termcolor.colored(line, colour, attrs=['bold']))
+                _add = False
+                break
+        if _add:
+            ret.append(line)
+    return "\n".join(ret)
+
+
+print(
+    get_log_container(
+        "ci",
+        pod_name,
+        "test",
+        highlights=[(".*completed successfully.*", "green"),
+                    (".*Creating namespace.*", "yellow")]))
