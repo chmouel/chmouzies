@@ -47,6 +47,11 @@ command = [
 
 shell = subprocess.run(command, stdout=subprocess.PIPE)
 ciruns = json.loads(shell.stdout)
+if not ciruns['items']:
+    print("All CI Runs for {targetrepo} has been deleted"
+          " already, rerun a test to have another one appears")
+    sys.exit(1)
+
 ret = []
 for run in ciruns['items']:
     jobspec = None
@@ -87,8 +92,10 @@ def get_log_container(namespace,
                       follow=False,
                       highlights=[]):
     since = ""
+    retall = []
+    cmd = f"oc logs -n {namespace} {pod_name} -c {container_name} --follow"
+    print(cmd)
     while True:
-        cmd = f"oc logs -n {namespace} {pod_name} -c {container_name}"
         marktime = datetime.datetime.now().isoformat("T") + "Z"
         if since:
             cmd += " " + since
@@ -101,6 +108,8 @@ def get_log_container(namespace,
         ret = []
         for line in output.split("\n"):
             _add = True
+            if finish_on and re.match(finish_on, line):
+                follow = False
             for reg, colour in highlights:
                 m = re.match(reg, line)
                 if m:
@@ -116,15 +125,21 @@ def get_log_container(namespace,
             since = f"--since-time={marktime}"
             time.sleep(5)
         else:
-            return
+            return retall
 
 
-get_log_container(
+ret = get_log_container(
     "ci",
     pod_name,
     "test",
     follow=True,
+    finish_on=".*Container setup in.*completed successfully.*",
     highlights=[(".*Resolved source https.*", "cyan"),
                 (".*Build.*succeeded after \d+", "magenta"),
                 (".*completed successfully.*", "green"),
                 (".*Creating namespace.*", "yellow")])
+for line in ret:
+    m = re.match(".*Using namespace (.*)", line)
+    if m:
+        print(m)
+        break
