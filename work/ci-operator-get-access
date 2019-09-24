@@ -35,7 +35,7 @@ function wait_and_log() {
 
         [[ "${log}" == "${previous_log}" ]] && { sleep 2;continue ;}
 
-        finis=$(echo ${log}|egrep -Eo "${grepend}" || true)
+        finis=$(echo "${log}"|egrep "${grepend}" || true)
         [[ -n ${finis} ]] && {
             echo "${finis}" > ${TMP}
             return
@@ -76,13 +76,17 @@ while True;do
 done
 echo "Found it in namespace ${ci_prj} ...."
 
-wait_and_log ${ci_prj} ${e2e_test_pod} setup "Access the OpenShift web-console here.*Login to the console with user.*"
+wait_and_log ${ci_prj} ${e2e_test_pod} setup ".*Access the OpenShift web-console here.*"
+clusterurl=$(egrep 'Access the OpenShift web-console here.*(https.*)"' ${TMP}|sed 's%.*https%https%;s/"$//')
+terminal-notifier -title 'Cluster has started' -message "CI has been Built on ${clusterurl}" -appIcon /Users/chmouel/Downloads/centos.png -open "${clusterurl}" -ignoreDnD
 
 oc rsh -n ${ci_prj} -c lease ${e2e_test_pod} cat /tmp/artifacts/installer/auth/kubeconfig > ${KOUTPUT}
-echo "Meanwhile Here is the kubeconfig:"
+echo
+echo "You can access the cluster with this kubeconfig:"
 echo export KUBECONFIG=${KOUTPUT}
+echo
 
-wait_and_log ${ci_prj} ${e2e_test_pod} "test" "Access the OpenShift web-console here.*Login to the console with user.*"
+wait_and_log ${ci_prj} ${e2e_test_pod} "test" ".*Waiting up to.*"
 
 echo export KUBECONFIG=${KOUTPUT}
 
