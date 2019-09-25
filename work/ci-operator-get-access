@@ -86,7 +86,7 @@ echo "You can access the cluster with this kubeconfig:"
 echo export KUBECONFIG=${KOUTPUT}
 echo
 
-wait_and_log ${ci_prj} ${e2e_test_pod} "test" ".*Waiting up to.*"
+wait_and_log ${ci_prj} ${e2e_test_pod} "test" ".*E2E TESTS PASSED.*"
 
 echo export KUBECONFIG=${KOUTPUT}
 
