@@ -1,24 +1,34 @@
-#!/bin/bash
-set -ex
+#!/usr/bin/env zsh
+set -e
 TMP=$(mktemp /tmp/.mm.XXXXXX)
 clean() { rm -f ${TMP}; }
 trap clean EXIT
+REMOTE_BRANCH=master
+
+
+while getopts ':c' arg
+do
+    case $arg in
+        (c) REMOTE_BRANCH=""  ;;
+        (\?) print invalid option: $OPTARG;;
+    esac
+done
+(( OPTIND > 1 )) && shift $(( OPTIND - 1 ))
 
 BASE_REMOTE=${1}
 USER_REMOTE=${2}
 
 [[ -z ${BASE_REMOTE} ]] && {
     echo "No base remote specified, will be using *rigin*"
-    sleep 3
     BASE_REMOTE=origin
 }
 
 [[ -z ${USER_REMOTE} ]] && {
     echo "No remote specified, will be using $(whoami)"
-    sleep 1
-    BASE_REMOTE=$(whoami)
+    USER_REMOTE=$(whoami)
 }
 
+read -t 3 || true
 
 BASE_REPO=$(git remote get-url ${BASE_REMOTE}|sed 's,\(https://github.com/\|git@github.com:\),,')
 USER_REPO=$(git remote get-url ${USER_REMOTE}|sed 's,\(https://github.com/\|git@github.com:\),,')
@@ -35,13 +45,15 @@ USER_REPO=$(git remote get-url ${USER_REMOTE}|sed 's,\(https://github.com/\|git@
 
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
-REMOTE_BRANCH=$(git ls-remote --heads ${BASE_REMOTE}|sed 's,.*refs/heads/,,'|fzf -1 --no-clear --height 10 || true)
 [[ -z ${REMOTE_BRANCH} ]] && {
-    echo "Could not find a remote branch to push to..."
-    exit 1
+    REMOTE_BRANCH=$(git ls-remote --heads ${BASE_REMOTE}|sed 's,.*refs/heads/,,'|fzf -1 --no-clear --height 10 || true)
+    [[ -z ${REMOTE_BRANCH} ]] && {
+        echo "Could not find a remote branch to push to..."
+        exit 1
+    }
 }
 
 echo "About to push Branch: ${CURRENT_BRANCH} to ${USER_REMOTE} :";sleep 1;echo
-git push -u ${CURRENT_BRANCH} ${USER_REMOTE}
+git push -u  ${USER_REMOTE} ${CURRENT_BRANCH}
 
 hub pull-request -b ${BASE_REPO}:${REMOTE_BRANCH} -h ${USER_REPO}:${CURRENT_BRANCH}
