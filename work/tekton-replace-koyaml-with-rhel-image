@@ -1,12 +1,9 @@
 #!/usr/bin/env bash
-mykoyaml="/tmp/ko.yaml"
 ubiimage=registry.access.redhat.com/ubi8/ubi:latest
 
-echo baseImageOverrides: > ${mykoyaml}
+echo baseImageOverrides:
 
 for i in $GOPATH/src/github.com/tektoncd/pipeline/cmd/*;do
     [[ -d ${i} ]] || continue;
-    echo "  ${i#$GOPATH/src/}: ${ubiimage}" >> ${mykoyaml};
+    echo "  ${i#$GOPATH/src/}: ${ubiimage}"
 done
-
-cat ${mykoyaml}
