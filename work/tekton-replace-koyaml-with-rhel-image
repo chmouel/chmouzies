@@ -4,6 +4,9 @@ ubiimage=registry.access.redhat.com/ubi8/ubi:latest
 
 echo baseImageOverrides: > ${mykoyaml}
 
-for i in $GOPATH/src/github.com/tektoncd/pipeline/cmd/*;do [[ -d ${i} ]] || continue;echo "  github.com/tektoncd/pipeline/$i: ${ubiimage}" >> ${mykoyaml};done
+for i in $GOPATH/src/github.com/tektoncd/pipeline/cmd/*;do
+    [[ -d ${i} ]] || continue;
+    echo "  ${i#$GOPATH/src/}: ${ubiimage}" >> ${mykoyaml};
+done
 
 cat ${mykoyaml}
