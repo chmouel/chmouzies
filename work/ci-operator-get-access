@@ -65,22 +65,35 @@ while True;do
     for _cip in ${_ciprojects};do
         e2e_test_pod=$(oc get pod -n ${_cip} -o name|grep "^pod/${JOB_NAME}" || true)
         [[ -n ${e2e_test_pod} ]] && {
-            ci_prj=${_cip}
-            break
+            ci_prjs="${ci_prj} ${_cip}"
         }
     done
-    [[ -n ${e2e_test_pod} ]] && break
-    [[ ${_cnt} == 500 ]] && { echo "We can't find no pod with prefix ${JOB_NAME}"; exit 1 ;}
+    [[ -n ${ci_prjs} ]] && break
+    [[ ${_cnt} == 50 ]] && { echo "We can't find no pod with prefix ${JOB_NAME}"; exit 1 ;}
     (( _cnt++ ))
     sleep 3
 done
+
+
+set -x
+_arr=(`echo ${ci_prjs}`)
+if [[ ${#_arr[@]} > 1 ]]; then
+    ci_prj=$(oc get project ${ci_prjs} --sort-by=.metadata.creationTimestamp --no-headers --template='{{ range .items  }}{{ printf "%s -- %s\n" .metadata.name .metadata.creationTimestamp  }}{{ end }}'|fzf --tac -1)
+    ci_prj=${ci_prj%% *}
+else
+    ci_prj=${ci_prjs}
+fi
+
 echo "Found it in namespace ${ci_prj} ...."
 
 wait_and_log ${ci_prj} ${e2e_test_pod} setup ".*Access the OpenShift web-console here.*"
+
 clusterurl=$(egrep 'Access the OpenShift web-console here.*(https.*)"' ${TMP}|sed 's%.*https%https%;s/"$//')
 terminal-notifier -title 'Cluster has started' -message "CI has been Built on ${clusterurl}" -appIcon /Users/chmouel/Downloads/centos.png -open "${clusterurl}" -ignoreDnD
 
+set -x
 oc rsh -n ${ci_prj} -c lease ${e2e_test_pod} cat /tmp/artifacts/installer/auth/kubeconfig > ${KOUTPUT}
+set +x
 echo
 echo "You can access the cluster with this kubeconfig:"
 echo export KUBECONFIG=${KOUTPUT}
