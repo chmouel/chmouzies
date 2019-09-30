@@ -1,0 +1,51 @@
+#!/usr/bin/env zsh
+set -e
+
+profile=chmouel
+export KUBECONFIG=~/.kube/config.os4
+
+while getopts ':i' arg
+do
+    case $arg in
+        (i) install=yes  ;;
+        (\?) print invalid option: $OPTARG;;
+    esac
+done
+(( OPTIND > 1 )) && shift $(( OPTIND - 1 ))
+
+[[ -n ${1} ]] && profile=$1
+
+curl -s chmouel.com/tmp/${profile}.kubeconfig.gpg | gpg --decrypt > ${KUBECONFIG}
+
+[[ ${install} != "yes" ]] && exit
+
+cd $GOPATH/src/github.com/tektoncd/pipeline
+
+${HOME}/bin/git-downup-update-repos
+
+currentbranch=$(git symbolic-ref -q HEAD);currentbranch=${currentbranch#refs/heads/}
+changed=$(git status --porcelain)
+if [[ -n ${changed} ]];then
+    git stash save -a -u "Staged before running an update $(date)"
+fi
+
+git checkout master
+
+info() {
+    echo "Job has failed you can run"
+    echo "  git checkout ${currentbranch}"
+    [[ -n ${changed} ]] && echo " and git stash pop";
+}
+trap info ERR
+
+
+export GO111MODULE=off
+ko apply -f config/
+oc project tekton-pipelines
+oc get pod -owide
+
+git checkout ${currentbranch}
+
+if [[ -n ${changed} ]];then
+    git stash pop
+fi
