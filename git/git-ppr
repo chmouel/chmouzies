@@ -4,13 +4,15 @@ TMP=$(mktemp /tmp/.mm.XXXXXX)
 clean() { rm -f ${TMP}; }
 trap clean EXIT
 REMOTE_BRANCH=master
+TEST=""
 
-
-while getopts ':c' arg
+while getopts 'C:ct' arg
 do
     case $arg in
+        (C) REMOTE_BRANCH=$OPTARG;;
         (c) REMOTE_BRANCH=""  ;;
-        (\?) print invalid option: $OPTARG;;
+        (t) TEST="true"  ;;
+        (\?) print invalid option: $OPTARG;exit 1;;
     esac
 done
 (( OPTIND > 1 )) && shift $(( OPTIND - 1 ))
@@ -54,6 +56,12 @@ CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 }
 
 echo "About to push Branch: ${CURRENT_BRANCH} to ${USER_REMOTE} :";sleep 1;echo
-git push -u  ${USER_REMOTE} ${CURRENT_BRANCH}
+if [[ -z ${TEST} ]];then
+    git push -u  ${USER_REMOTE} ${CURRENT_BRANCH}
+fi
 
-hub pull-request -b ${BASE_REPO}:${REMOTE_BRANCH} -h ${USER_REPO}:${CURRENT_BRANCH}
+
+echo "About to PR: Base: ${BASE_REPO}:${REMOTE_BRANCH} HEAD: ${USER_REPO}:${CURRENT_BRANCH} :";sleep 1;echo
+if [[ -z ${TEST} ]];then
+    hub pull-request -b ${BASE_REPO}:${REMOTE_BRANCH} -h ${USER_REPO}:${CURRENT_BRANCH}
+fi
