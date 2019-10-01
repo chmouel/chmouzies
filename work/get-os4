@@ -1,8 +1,9 @@
 #!/usr/bin/env zsh
 set -e
+set -x
 
 profile=chmouel
-export KUBECONFIG=~/.kube/config.os4
+prefixk=os4
 
 while getopts ':i' arg
 do
@@ -13,11 +14,13 @@ do
 done
 (( OPTIND > 1 )) && shift $(( OPTIND - 1 ))
 
-[[ -n ${1} ]] && profile=$1
+[[ -n ${1} ]] && { profile=$1;prefixk=${1} }
 
+export KUBECONFIG=~/.kube/config.${prefixk}
 curl -s chmouel.com/tmp/${profile}.kubeconfig.gpg | gpg --decrypt > ${KUBECONFIG}
 
 [[ ${install} != "yes" ]] && exit
+
 
 cd $GOPATH/src/github.com/tektoncd/pipeline
 
