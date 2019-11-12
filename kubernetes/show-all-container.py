@@ -43,12 +43,16 @@ def colourText(text, color):
 
 parser = argparse.ArgumentParser()
 parser.add_argument("pod", nargs="+", default=False)
+parser.add_argument('-n', dest="namespace", type=str)
 args = parser.parse_args(sys.argv[1:])
 
 for pod in args.pod:
+    extra_args = ''
+    if args.namespace:
+        extra_args += f"-n {args.namespace}"
     shell = subprocess.run(
         # "cat /tmp/a.json".split(" "),
-        ("oc get pod -ojson %s" % (pod)).split(" "),
+        ("oc %s get pod -ojson %s" % (extra_args, pod)).split(" "),
         stderr=subprocess.PIPE,
         stdout=subprocess.PIPE)
 
@@ -67,7 +71,8 @@ for pod in args.pod:
             state = colourText(state, "blue")
 
         lastlog = subprocess.run(
-            ("oc logs --tail=1 %s -c%s" % (pod, container['name'])).split(" "),
+            ("oc %s logs --tail=1 %s -c%s" % (extra_args, pod,
+                                              container['name'])).split(" "),
             stderr=subprocess.PIPE,
             stdout=subprocess.PIPE)
         if lastlog.returncode != 0:
