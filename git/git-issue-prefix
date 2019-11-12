@@ -1,21 +1,38 @@
-#!/bin/bash
+#!/usr/bin/env bash
 titleonly=
-if [[ $1 == "-t" ]];then
-    titleonly=t
-fi
 
-title=$(osascript -e 'tell application "Firefox" to return name of windows as text')
-number=$(echo $title|gsed -r 's/.* Issue #([0-9]+) .*/\1/;')
-[[ ${title} =~ .*Issue\ \#[0-9]{3,} ]] || { echo "I could not find a github Issue ###"; exit 1;}
-if [[ ${titleonly} ]];then
-    echo $title|gsed -r 's/(.*)...Issue #[0-9]+ .*/\1/;'
+while getopts "cb" o; do
+    case "${o}" in
+        c)
+            commitmessage=t
+            ;;
+        b)
+            createbranch=t
+            ;;
+        *)
+            echo "Invalid option"; exit 1;
+            ;;
+    esac
+done
+shift $((OPTIND-1))
+
+
+ARGS=${@}
+[[ -n ${@} ]] && ARGS="-q $@"
+
+#title=$(osascript -e 'tell application "Firefox" to return name of windows as text')
+title=$(hub issue|fzf -1 ${ARGS} --header "Choose a GitHUB Issue" --tac --preview="hub issue show \`echo {}|sed 's/#\([0-9]*\).*/\1/'\`")
+number=$(echo $title|sed 's/[ ]*#\([0-9]*\).*/\1/')
+
+if [[ ${commitmessage} ]];then
+    echo $title|sed -r 's/[ ]*#[0-9]+[ ]*//;'
     echo
-    echo "Fixes #$number"
+    echo "Closes #$number"
     exit
 fi
-prefix=$(echo $title|gsed -r 's/(.*)...Issue #[0-9]+ .*/\L\1/;s/ /-/g')
 
-prefix=$(echo $prefix|gawk -v len=25 '{ if (length($0) > len) print substr($0, 1, len-3); else print; }')
+prefix=$(echo "$title"|sed -r 's,kind/\w+,,;s/help wanted//;s/[ ]*#(.*)/\L\1/;s/ [ ]*/ /g;s/[ ]*$//;s/^[ ]*//;s/ /-/g;s,\(/\`||:|;|"|\|\),,g')
+prefix=$(echo "$prefix"|awk -v len=25 '{ if (length($0) > len) print substr($0, 1, len-3); else print; }')
 [[ $prefix == *- ]] && prefix=$(echo ${prefix}| sed 's/-$//')
 
 
@@ -24,5 +41,5 @@ if [[ -z ${title} || -z ${number} ]];then
     exit
 fi
 
-
-echo issue-${number}-${prefix}
+[[ -n ${createbranch} ]] && { git checkout -b issue-${prefix} ; exit 0 ;}
+echo issue-${prefix}
