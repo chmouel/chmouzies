@@ -41,8 +41,12 @@ EOF
 }
 
 function releaseyamlinstall {
-    oc create -f \
-       https://raw.githubusercontent.com/openshift/tektoncd-pipeline/release-next/openshift/release/tektoncd-pipeline-nightly.yaml
+    yaml=https://raw.githubusercontent.com/openshift/tektoncd-pipeline/release-next/openshift/release/tektoncd-pipeline-nightly.yaml
+    curl -o/dev/null -f ${yaml} || {
+        stable_version=$(curl -s https://api.github.com/repos/tektoncd/pipeline/releases | python -c "import sys, json;x=json.load(sys.stdin);print(x[0]['tag_name'])")
+        yaml=https://raw.githubusercontent.com/openshift/tektoncd-pipeline/release-${stable_version}/openshift/release/tektoncd-pipeline-${stable_version}.yaml
+    }
+    oc create -f ${yaml}
 }
 
 function koinstall {
