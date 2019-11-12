@@ -3,7 +3,7 @@
 function download_latest_oc() {
     pushd /usr/local/bin >/dev/null && \
 curl -s -L $(curl -L -s "https://api.github.com/repos/openshift/origin/releases/latest"|python -c "import sys, json;x=json.load(sys.stdin);print([ r['browser_download_url'] for r in x['assets'] if 'openshift-origin-client-tools' in r['name'] and 'mac' in r['name']][0])") -o /tmp/oc.tgz && \
-    gtar xz -f/tmp/oc.tgz --wildcards "*/oc" --strip-components=1 && \
+    tar xvz -f/tmp/oc.tgz --wildcards "*/oc" --strip-components=1 && \
 popd >/dev/null
 }
 
