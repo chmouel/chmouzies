@@ -16,7 +16,7 @@ if [[ -n ${changed} ]];then
 fi
 
 for branch in release-next master;do
-    git checkout openshift-${branch}
+    git checkout ${branch}
     git reset --hard openshift/${branch}
 done
 
