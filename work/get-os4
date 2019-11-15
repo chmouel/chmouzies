@@ -2,8 +2,8 @@
 set -e
 # set -x
 
-profile=chmouel42
-prefixk=os42
+profile=chmouel
+prefixk=os4
 operator=
 releaseyaml=
 koinstall=
@@ -46,6 +46,7 @@ function releaseyamlinstall {
         stable_version=$(curl -s https://api.github.com/repos/tektoncd/pipeline/releases | python -c "import sys, json;x=json.load(sys.stdin);print(x[0]['tag_name'])")
         yaml=https://raw.githubusercontent.com/openshift/tektoncd-pipeline/release-${stable_version}/openshift/release/tektoncd-pipeline-${stable_version}.yaml
     }
+    echo "Installing: $(basename ${yaml})"
     oc create -f ${yaml}
 }
 
@@ -85,6 +86,8 @@ elif [[ -n ${releaseyaml} ]];then
     releaseyamlinstall
 elif [[ -n ${operator} ]];then
     operatorinstall
+else
+    exit
 fi
 
 sleep 3
