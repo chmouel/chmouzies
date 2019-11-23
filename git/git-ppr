@@ -59,7 +59,7 @@ CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
 echo "About to push Branch: ${CURRENT_BRANCH} to ${USER_REMOTE} :";sleep 1;echo
 if [[ -z ${TEST} ]];then
-    git push ${git_options} -u  ${USER_REMOTE} ${CURRENT_BRANCH}
+    git push --force -u  ${USER_REMOTE} ${CURRENT_BRANCH}
 fi
 
 

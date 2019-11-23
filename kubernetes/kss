@@ -111,10 +111,14 @@ if args.namespace:
 
 if not args.pod:
     import os
-    runcmd = f"{kctl} get pods -o name|fzf -1"
+    runcmd = f"{kctl} get pods -o name|fzf -1 --preview='kubectl describe {{}}'"
     args.pod = [os.popen(runcmd).read().strip().replace("pod/", "")]
 
 for pod in args.pod:
+    if not pod.strip():
+        continue
+    print("Pod: " + pod)
+    print()
     cmdline = f"{kctl} get pod {pod} -ojson"
     shell = subprocess.run(
         # "cat /tmp/a.json".split(" "),
