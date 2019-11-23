@@ -17,6 +17,7 @@ import argparse
 import sys
 import subprocess
 import json
+import re
 
 
 def colourText(text, color):
@@ -41,46 +42,93 @@ def colourText(text, color):
     return s
 
 
+def show_log(kctl, args, container, pod):
+    cmd = "%s logs --tail=%s %s -c%s" % (kctl, args.maxlines, pod, container)
+    lastlog = subprocess.run(
+        cmd.split(" "), stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+    if lastlog.returncode != 0:
+        print("i could not run '%s'" % (cmd))
+        sys.exit(1)
+    return lastlog.stdout.decode().strip()
+
+
+def overcnt(jeez, kctl, pod, args):
+    for container in jeez:
+        if args.restrict:
+            if len(re.findall(args.restrict, container['name'])) == 0:
+                continue
+
+        state = list(container['state'].keys())[0].capitalize()
+        if state in "Running":
+            state = colourText(state, "blue")
+        elif state == "Terminated":
+            if container['state']['terminated']['exitCode'] != 0:
+                state = colourText("Fail", "red")
+            else:
+                state = colourText("Success", "green")
+        elif state == "Waiting":
+            state = colourText(state, "grey")
+
+        cname = colourText(container['name'], 'white_bold')
+
+        line_new = ' {:60}  {:>20}'.format(cname, state)
+        print(line_new)
+
+        if args.showlog:
+            outputlog = show_log(kctl, args, container['name'], pod)
+            if outputlog:
+                print()
+                print(outputlog)
+                print()
+
+
 parser = argparse.ArgumentParser()
-parser.add_argument("pod", nargs="+", default=False)
+parser.add_argument("pod", nargs="?", default="")
 parser.add_argument('-n', dest="namespace", type=str)
+parser.add_argument(
+    '-r',
+    '--restrict',
+    type=str,
+    help='Restrict to show only those containers (regexp)')
+
+parser.add_argument(
+    '-l',
+    '--showlog',
+    action='store_true',
+    default=False,
+    help='Show logs of containers')
+parser.add_argument(
+    '--maxlines',
+    type=str,
+    default="-1",
+    help='Maximum line when showing logs')
+
 args = parser.parse_args(sys.argv[1:])
 
+kctl = 'kubectl'
+if args.namespace:
+    kctl += f" -n {args.namespace}"
+
+if not args.pod:
+    import os
+    runcmd = f"{kctl} get pods -o name|fzf -1"
+    args.pod = [os.popen(runcmd).read().strip().replace("pod/", "")]
+
 for pod in args.pod:
-    extra_args = ''
-    if args.namespace:
-        extra_args += f"-n {args.namespace}"
+    cmdline = f"{kctl} get pod {pod} -ojson"
     shell = subprocess.run(
         # "cat /tmp/a.json".split(" "),
-        ("oc %s get pod -ojson %s" % (extra_args, pod)).split(" "),
+        cmdline.split(" "),
         stderr=subprocess.PIPE,
         stdout=subprocess.PIPE)
-
     if shell.returncode != 0:
-        print("The was some problem running oc get pod on %s" % (pod))
+        print("The was some problem running '%s'" % (cmdline))
         sys.exit(1)
 
     output = shell.stdout.decode().strip()
     jeez = json.loads(output)
-    for container in jeez['status']['containerStatuses']:
-        state = list(container['state'].keys())[0].capitalize()
-
-        if state == "Running":
-            state = colourText(state, "green")
-        elif state == "Terminated":
-            state = colourText(state, "blue")
-
-        lastlog = subprocess.run(
-            ("oc %s logs --tail=1 %s -c%s" % (extra_args, pod,
-                                              container['name'])).split(" "),
-            stderr=subprocess.PIPE,
-            stdout=subprocess.PIPE)
-        if lastlog.returncode != 0:
-            print(
-                "i could not run oc logs on %s/%s" % (pod, container['name']))
-            sys.exit(1)
-        log = lastlog.stdout.decode().strip()
-        if log:
-            log = " - %s" % (log)
-        print("[%s] - %s%s" % (colourText(container['name'], 'white_bold'),
-                               state, log))
+    print("Init Containers: ")
+    overcnt(jeez['status']['initContainerStatuses'], kctl, pod, args)
+    print()
+    print("Containers: ")
+    overcnt(jeez['status']['containerStatuses'], kctl, pod, args)
