@@ -8,12 +8,15 @@ operator=
 releaseyaml=
 koinstall=
 
-while getopts ':kor' arg;do
+BASE_URL=osinstall.chmouel.com
+
+while getopts ':korR' arg;do
     case $arg in
+      (R) reinstall=yes ;;
       (o) operator=yes ;;
       (r) releaseyaml=yes ;;
       (k) koinstall=yes  ;;
-      (\?) print invalid option: $OPTARG;;
+      (\?) print invalid option: $OPTARG;exit 1;;
     esac
 done
 
@@ -23,7 +26,9 @@ done
 [[ -n ${2} ]] && { prefixk=$2; }
 
 export KUBECONFIG=~/.kube/config.${prefixk}
-curl -s chmouel.com/tmp/${profile}.kubeconfig.gpg | gpg --decrypt > ${KUBECONFIG}
+curl -# -f ${BASE_URL}/${profile}/kubeconfig.gpg | gpg --quiet --decrypt > ${KUBECONFIG}
+echo "export KUBECONFIG=${KUBECONFIG}"
+
 
 function operatorinstall() {
     cat <<EOF | oc apply -f-
@@ -47,6 +52,7 @@ function releaseyamlinstall {
         yaml=https://raw.githubusercontent.com/openshift/tektoncd-pipeline/release-${stable_version}/openshift/release/tektoncd-pipeline-${stable_version}.yaml
     }
     echo "Installing: $(basename ${yaml})"
+    [[ -n ${reinstall} ]]  && { oc delete -f ${yaml} || true ;}
     oc create -f ${yaml}
 }
 
