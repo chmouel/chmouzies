@@ -8,7 +8,7 @@ operator=
 releaseyaml=
 koinstall=
 
-BASE_URL=osinstall.chmouel.com
+BASE_URL=https://osinstall.chmouel.com
 
 while getopts ':korR' arg;do
     case $arg in
