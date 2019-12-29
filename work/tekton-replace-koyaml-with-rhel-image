@@ -1,9 +1,0 @@
-#!/usr/bin/env bash
-ubiimage=registry.access.redhat.com/ubi8/ubi:latest
-
-echo baseImageOverrides:
-
-for i in $GOPATH/src/github.com/tektoncd/pipeline/cmd/*;do
-    [[ -d ${i} ]] || continue;
-    echo "  ${i#$GOPATH/src/}: ${ubiimage}"
-done
