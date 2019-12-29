@@ -1,0 +1,10 @@
+#!/bin/bash
+set -eu
+sudo=
+[[ -z $1 ]] && {
+    echo "need a file"
+    exit 1
+}
+
+[[ -w $1 ]] || sudo="|sudo:root@$(hostname -s)"
+echo /ssh:${USER}@$(hostname -s)${sudo}:$(readlink -f $1)
