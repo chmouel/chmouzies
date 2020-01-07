@@ -23,10 +23,26 @@ else
     preview='tkn taskrun describe {}'
 fi
 
-task=$(oc get tr --sort-by=.metadata.creationTimestamp -o name | \
-           sed 's,.*/,,'|fzf --ansi -1 ${chooseTaskArg} --tac \
-                             --header "Choose a taskrun" \
-                             --preview  ${preview} )
+task=$(oc get tr -o json --sort-by=.metadata.creationTimestamp| python <(cat  <<EOF
+import json,sys
+jeez=json.loads(sys.stdin.read())
+def colit(condition, name):
+    if condition=='Succeeded':
+       color=32
+    elif condition=='Failed':
+       color=31
+    elif condition=='Running':
+       color=34
+    else:
+       color=30
+    return("\033[1;%dm%s\033[0;0m" % (color, name))
+for i in jeez['items']:
+    print(colit(i['status']['conditions'][0]['reason'], i['metadata']['name']))
+
+EOF
+) | fzf --ansi -1 ${chooseTaskArg} --tac \
+        --header "Choose a taskrun" \
+        --preview  ${preview})
 
 [[ -z ${task} ]] && return
 
