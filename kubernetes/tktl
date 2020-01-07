@@ -1,0 +1,49 @@
+#!/usr/bin/env zsh -f
+set -eu
+local preview pods p follow choose_containers containeri container use_kubectl use_kss
+
+while getopts 'fKkc' arg
+do
+    case $arg in
+        (f) follow="-f"  ;;
+        (K) use_kss=yes ;;
+        (k) use_kubectl="yes";;
+        (c) use_kubectl="yes";choose_containers="yes";; # until tkn support limiting to container we should be implicit
+        (\?) print invalid option: $OPTARG;exit 1;;
+    esac
+done
+(( OPTIND > 1 )) && shift $(( OPTIND - 1 ))
+
+chooseTaskArg=${1:-""};[[ -n ${chooseTaskArg} ]] && chooseTaskArg="-q ${chooseTaskArg}"
+chooseContainerArg=${2:-""}
+
+if [[ -n ${use_kss} ]];then
+    preview='kss `kubectl get -o json tr {}| jq -r .status.podName`'
+else
+    preview='tkn taskrun describe {}'
+fi
+
+task=$(oc get tr --sort-by=.metadata.creationTimestamp -o name | \
+           sed 's,.*/,,'|fzf --ansi -1 ${chooseTaskArg} --tac \
+                             --header "Choose a taskrun" \
+                             --preview  ${preview} )
+
+[[ -z ${task} ]] && return
+
+podName=$(oc get tr -o json ${task} | jq -r '.status.podName')
+if [[ -n ${choose_containers} ]];then
+    [[ -n ${chooseContainerArg} ]] && containeri="-q ${chooseContainerArg}"
+    container=$(oc get pod ${podName} -o json|jq -r '.spec.containers[].name'| \
+                    fzf --header "Choose a container." \
+                        --tac -1 ${containeri} --preview "kubectl logs ${podName} -c {}")
+    [[ -n ${container} ]] && container=(-c ${container})
+else
+    container=(--all-containers --max-log-requests=10)
+fi
+
+t=$(basename ${task});
+if [[ -n ${use_kubectl} ]];then
+    kubectl logs ${follow} ${podName} ${container[@]}
+else
+    tkn taskrun logs ${follow} ${t}
+fi
