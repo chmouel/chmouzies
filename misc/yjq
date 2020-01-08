@@ -1,0 +1,32 @@
+#!/usr/bin/env zsh
+# Chmouel Boudjnah <chmouel@chmouel.com>
+# Parse some yaml, convert to json, pass it to jq with arguments selection and :
+# convert it to yaml back (default)
+# output as json if -j
+# output as text if fail to convert it to yaml
+set -ue
+local json="" ARGS=""
+
+TMP=$(mktemp /tmp/.mm.XXXXXX)
+clean() { rm -f ${TMP}; }
+trap clean EXIT
+
+while getopts 'j' arg
+do
+    case $arg in
+        (j) json=yes;;
+        (\?) print "invalid option: $OPTARG";exit 1;;
+    esac
+done
+(( OPTIND > 1 )) && shift $(( OPTIND - 1 ))
+
+ARGS=${@}
+[[ -z ${ARGS} ]] && ARGS="."
+
+python3 -c 'import yaml,json,sys;print(json.dumps(yaml.load(sys.stdin), indent=True))'|jq $@ > ${TMP}
+
+if [[ -n ${json} ]];then
+    jq '.' ${TMP}
+else
+    python3 -c 'import yaml,json,sys;print(yaml.dump(json.load(sys.stdin)))' 2>/dev/null < ${TMP} || cat ${TMP}
+fi
