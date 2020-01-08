@@ -1,4 +1,4 @@
-#!/usr/bin/env zsh -f
+#!/usr/bin/env zsh
 set -eu
 local preview pods p follow choose_containers containeri container use_tkn
 local use_kss last
@@ -24,7 +24,6 @@ Flags:
 
 EOF
 }
-
 while getopts 'lhfKtc' arg
 do
     case $arg in
@@ -34,7 +33,7 @@ do
         (t) use_tkn="yes";;
         (c) use_tkn="";choose_containers="yes";; # use kubectl until tkn support limiting to container we should be implicit
         (h) help; exit 0;;
-        (\?) print invalid option: $OPTARG;help();exit 1;;
+        (\?) help;exit 1;;
     esac
 done
 (( OPTIND > 1 )) && shift $(( OPTIND - 1 ))
