@@ -3,15 +3,38 @@ set -eu
 local preview pods p follow choose_containers containeri container use_tkn
 local use_kss last
 
-while getopts 'fKkcl' arg
+function help {
+    cat <<EOF
+tktl [TASK Query] [Container Query]"
+
+Queries are initial queries for selection on fzf, i.e:
+
+tktl buildah push
+
+will autoselect the buildah taskrun (or ask to choose if there is multiple) and
+the push container
+
+Flags:
+
+-l select the last taskruns
+-f follow logs
+-K use kss for previewing the taskruns (need to be installed)
+-t use tkn to display the logs
+-c choose a specific container (ie step) not supported with -t
+
+EOF
+}
+
+while getopts 'lhfKtc' arg
 do
     case $arg in
         (l) last="true";;
         (f) follow="-f"  ;;
         (K) use_kss=yes ;;
-        (k) use_tkn="yes";;
+        (t) use_tkn="yes";;
         (c) use_tkn="";choose_containers="yes";; # use kubectl until tkn support limiting to container we should be implicit
-        (\?) print invalid option: $OPTARG;exit 1;;
+        (h) help; exit 0;;
+        (\?) print invalid option: $OPTARG;help();exit 1;;
     esac
 done
 (( OPTIND > 1 )) && shift $(( OPTIND - 1 ))
