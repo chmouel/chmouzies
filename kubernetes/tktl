@@ -77,10 +77,10 @@ fi
 podName=$(kubectl get tr -o json ${task} | jq -r '.status.podName')
 if [[ -n ${choose_containers} ]];then
     [[ -n ${chooseContainerArg} ]] && containeri="-q ${chooseContainerArg}"
-    container=$(kubectl get pod ${podName} -o json|jq -r '.spec.containers[].name'| \
+    container=$(kubectl get pod ${podName} -o json|sed 's/step-//'|jq -r '.spec.containers[].name'| \
                     fzf --header "Choose a container." \
-                        --tac -1 ${containeri} --preview "kubectl logs ${podName} -c {}")
-    [[ -n ${container} ]] && container=(-c ${container})
+                        --tac -1 ${containeri} --preview "kubectl logs ${podName} -c step-{}")
+    [[ -n ${container} ]] && container=(-c step-${container})
 else
     container=(--all-containers --max-log-requests=10)
 fi
