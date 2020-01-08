@@ -1,14 +1,16 @@
 #!/usr/bin/env zsh -f
 set -eu
-local preview pods p follow choose_containers containeri container use_kubectl use_kss
+local preview pods p follow choose_containers containeri container use_tkn
+local use_kss last
 
-while getopts 'fKkc' arg
+while getopts 'fKkcl' arg
 do
     case $arg in
+        (l) last="true";;
         (f) follow="-f"  ;;
         (K) use_kss=yes ;;
-        (k) use_kubectl="yes";;
-        (c) use_kubectl="yes";choose_containers="yes";; # until tkn support limiting to container we should be implicit
+        (k) use_tkn="yes";;
+        (c) use_tkn="";choose_containers="yes";; # use kubectl until tkn support limiting to container we should be implicit
         (\?) print invalid option: $OPTARG;exit 1;;
     esac
 done
@@ -23,7 +25,10 @@ else
     preview='tkn taskrun describe {}'
 fi
 
-task=$(oc get tr -o json --sort-by=.metadata.creationTimestamp| python <(cat  <<EOF
+if [[ -n ${last} ]];then
+    task=$(oc get tr -o name --sort-by=.metadata.creationTimestamp|sed 's,.*/,,'|tail -1)
+else
+    task=$(oc get tr -o json --sort-by=.metadata.creationTimestamp| python <(cat  <<EOF
 import json,sys
 jeez=json.loads(sys.stdin.read())
 def colit(condition, name):
@@ -40,9 +45,10 @@ for i in jeez['items']:
     print(colit(i['status']['conditions'][0]['reason'], i['metadata']['name']))
 
 EOF
-) | fzf --ansi -1 ${chooseTaskArg} --tac \
-        --header "Choose a taskrun" \
-        --preview  ${preview})
+  ) | fzf --ansi -1 ${chooseTaskArg} --tac \
+          --header "Choose a taskrun" \
+          --preview  ${preview})
+fi
 
 [[ -z ${task} ]] && return
 
@@ -58,8 +64,8 @@ else
 fi
 
 t=$(basename ${task});
-if [[ -n ${use_kubectl} ]];then
-    kubectl logs ${follow} ${podName} ${container[@]}
-else
+if [[ -n ${use_tkn} ]];then
     tkn taskrun logs ${follow} ${t}
+else
+    kubectl logs ${follow} ${podName} ${container[@]}
 fi
