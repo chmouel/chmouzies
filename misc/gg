@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
 set -eu
-vim= emacsclient= line= column= O= editor=
+vim= emacsclient= line= column= O= editor= all= editall=
 
-while getopts "vme" o; do
+TMP=$(mktemp /tmp/.mm.XXXXXX)
+clean() { rm -f ${TMP}; }
+trap clean EXIT
+
+while getopts "avme" o; do
     case "${o}" in
+        a)
+            editall=yes;;
         v)
             vim=yes;;
         m)
@@ -17,23 +23,40 @@ while getopts "vme" o; do
 done
 shift $((OPTIND-1))
 
-
 RG_PREFIX="rg --column --line-number --no-heading --color=always --smart-case "
 INITIAL_QUERY="${1:-""}"
-O=$(FZF_DEFAULT_COMMAND="$RG_PREFIX '$INITIAL_QUERY'" \
-  fzf --bind "change:reload:$RG_PREFIX {q} || true" \
+echo ${INITIAL_QUERY} > ${TMP}
+RES=$(FZF_DEFAULT_COMMAND="$RG_PREFIX '$INITIAL_QUERY'" \
+  fzf --bind "change:reload:$RG_PREFIX {q} || true;echo {q} > ${TMP}" \
   --ansi --phony --query "$INITIAL_QUERY")
 
-[[ -z $O ]] && exit
+[[ -z $RES ]] && exit
 
-echo ${O/:*}
+QUERY=$(cat ${TMP})
 
-[[ $O =~ (.*):([0-9]*):([0-9]*): ]] && {
-    filename=${BASH_REMATCH[1]}
-    line=${BASH_REMATCH[2]}
-    column=${BASH_REMATCH[3]}
+function edit() {
+    local res="${1}"
+    local query="${2}"
+    [[ ${res} =~ (.*):([0-9]*):([0-9]*) ]] && {
+        filename=${BASH_REMATCH[1]}
+        line=${BASH_REMATCH[2]}
+        column=${BASH_REMATCH[3]}
+    }
+    echo ${filename}
+
+    set +e
+    [[ -n ${vim} ]] && vim +${line} -c "execute \"normal /${query}\n\"" ${filename}
+    [[ -n ${emacsclient} ]] && emacsclient +${line}:${column} ${filename}
+    [[ -n ${editor} ]] && ${EDITOR} +${line}:${column} ${filename}
+    set -e
 }
 
-[[ -n ${vim} ]] && vim +${line} -c "execute \"normal /${INITIAL_QUERY}\n\"" ${O/:*}
-[[ -n ${emacsclient} ]] && emacsclient +${line}:${column} -n  ${O/:*}
-[[ -n ${editor} ]] && ${EDITOR} +${line}:${column} ${O/:*}
+if [[ -n ${editall} ]];then
+    # redo query
+    match=($(${RG_PREFIX} --color=never  ${QUERY}|grep -Eo '^([^:]*?):([0-9]*):([0-9]*)'))
+    for r in ${match[@]};do
+        edit "$r" "$QUERY"
+    done
+else
+    edit "${RES}" ${QUERY}
+fi
