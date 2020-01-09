@@ -117,5 +117,5 @@ t=$(basename ${task});
 if [[ -n ${use_tkn} ]];then
     tkn taskrun logs ${follow} ${t}
 else
-    kubectl logs ${follow} ${podName} ${container[@]}
+    kubectl logs ${follow} ${podName} ${containers[@]}
 fi
