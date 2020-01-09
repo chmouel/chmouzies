@@ -77,9 +77,37 @@ fi
 podName=$(kubectl get tr -o json ${task} | jq -r '.status.podName')
 if [[ -n ${choose_containers} ]];then
     [[ -n ${chooseContainerArg} ]] && containeri="-q ${chooseContainerArg}"
-    container=$(kubectl get pod ${podName} -o json|sed 's/step-//'|jq -r '.spec.containers[].name'| \
-                    fzf --header "Choose a container." \
-                        --tac -1 ${containeri} --preview "kubectl logs ${podName} -c step-{}")
+
+    containers=$(kubectl get pod ${podName} -o json|python <(cat  <<EOF
+import json,sys,datetime
+jeez=json.loads(sys.stdin.read())
+ret={}
+for i in jeez['spec']['containers']:
+    for c in jeez['status']['containerStatuses'] + jeez['status']['initContainerStatuses']:
+        if i['name'] != c['name']:
+            continue
+        if 'terminated' in c['state']:
+           k = 'terminated'
+           if c['state']['terminated']['reason'] == 'Error':
+              color=31
+           elif c['state']['terminated']['reason'] == 'Completed':
+              color=32
+           else:
+              color=30
+        elif 'running' in c['state']:
+           k = 'running'
+           color = 34
+        else:
+            print(c['state'])
+        ret[c['name']] = {'started':
+            datetime.datetime.strptime(c['state'][k]['startedAt'][:-1],'%Y-%m-%dT%H:%M:%S'),
+            'color': color, 'state': c['state']}
+
+for x in sorted(ret.items(), key=lambda p: p[1]['started']):
+    print("\033[1;%dm%s\033[0;0m" % (x[1]['color'], x[0].replace("step-", "")))
+EOF
+) | fzf --ansi --header "Choose a container." --tac -1 ${containeri} \
+    --preview "kubectl logs ${podName} -c step-{}")
     [[ -n ${container} ]] && container=(-c step-${container})
 else
     container=(--all-containers --max-log-requests=10)
