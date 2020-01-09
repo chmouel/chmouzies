@@ -8,6 +8,6 @@
 
 ![yjq](.shots/yjq.png)
 
-## route53-delete-record
+## [route53-delete-record](route53-delete-record.py)
 
 How to delete route53 records with boto, cause it's an insane amount of `b****ck` with the aws cli
