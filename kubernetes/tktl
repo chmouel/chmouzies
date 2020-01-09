@@ -1,4 +1,5 @@
 #!/usr/bin/env zsh
+## Need kubectl/fzf/python3/jq/tkn
 set -eu
 local preview pods p follow choose_containers containeri container use_tkn
 local use_kss last
@@ -31,7 +32,7 @@ do
         (f) follow="-f"  ;;
         (K) use_kss=yes ;;
         (t) use_tkn="yes";;
-        (c) use_tkn="";choose_containers="yes";; # use kubectl until tkn support limiting to container we should be implicit
+        (c) use_tkn="" choose_containers="yes";; # use kubectl until tkn support limiting to container we should be implicit
         (h) help; exit 0;;
         (\?) help;exit 1;;
     esac
@@ -47,6 +48,10 @@ else
     preview='tkn taskrun describe {}'
 fi
 
+kubectl get tr 2>/dev/null >/dev/null || {
+    echo "Could not connect or could not detect a TaskRun object on the server."
+    exit 1
+}
 if [[ -n ${last} ]];then
     task=$(kubectl get tr -o name --sort-by=.metadata.creationTimestamp|sed 's,.*/,,'|tail -1)
 else
