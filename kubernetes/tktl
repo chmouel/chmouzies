@@ -108,9 +108,9 @@ for x in sorted(ret.items(), key=lambda p: p[1]['started']):
 EOF
 ) | fzf --ansi --header "Choose a container." --tac -1 ${containeri} \
     --preview "kubectl logs ${podName} -c step-{}")
-    [[ -n ${container} ]] && container=(-c step-${container})
+    [[ -n ${containers} ]] && containers=(-c step-${container})
 else
-    container=(--all-containers --max-log-requests=10)
+    containers=(--all-containers --max-log-requests=10)
 fi
 
 t=$(basename ${task});
