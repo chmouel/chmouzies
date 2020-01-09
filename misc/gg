@@ -23,7 +23,7 @@ while getopts "avme" o; do
 done
 shift $((OPTIND-1))
 
-RG_PREFIX="rg --column --line-number --no-heading --color=always --smart-case "
+RG_PREFIX="rg --column --line-number --no-heading --color=always --case-sensitive "
 INITIAL_QUERY="${1:-""}"
 echo ${INITIAL_QUERY} > ${TMP}
 RES=$(FZF_DEFAULT_COMMAND="$RG_PREFIX '$INITIAL_QUERY'" \
@@ -45,18 +45,19 @@ function edit() {
     echo ${filename}
 
     set +e
-    [[ -n ${vim} ]] && vim +${line} -c "execute \"normal /${query}\n\"" ${filename}
+    [[ -n ${vim} ]] && vim +${line} -c "normal ${column}|\n\"" ${filename}
     [[ -n ${emacsclient} ]] && emacsclient +${line}:${column} ${filename}
     [[ -n ${editor} ]] && ${EDITOR} +${line}:${column} ${filename}
     set -e
 }
 
 if [[ -n ${editall} ]];then
-    # redo query
     match=($(${RG_PREFIX} --color=never  ${QUERY}|grep -Eo '^([^:]*?):([0-9]*):([0-9]*)'))
-    for r in ${match[@]};do
-        edit "$r" "$QUERY"
-    done
 else
-    edit "${RES}" ${QUERY}
+    match=($(echo ${RES}|grep -Eo '^([^:]*?):([0-9]*):([0-9]*)'))
 fi
+
+for r in ${match[@]};do
+    edit "$r" "$QUERY"
+    [[ -z ${editall} ]] && break
+done
