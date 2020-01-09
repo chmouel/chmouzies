@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 set -eu
-vim=
+vim= emacsclient= line= column= O= editor=
 
-while getopts "v" o; do
+while getopts "vme" o; do
     case "${o}" in
         v)
             vim=yes;;
+        m)
+            emacsclient=yes;;
+        e)
+            editor=yes;;
         *)
             echo "Invalid option"; exit 1;
             ;;
@@ -23,4 +27,13 @@ O=$(FZF_DEFAULT_COMMAND="$RG_PREFIX '$INITIAL_QUERY'" \
 [[ -z $O ]] && exit
 
 echo ${O/:*}
-[[ -n ${vim} ]] && exec vim ${O/:*}
+
+[[ $O =~ (.*):([0-9]*):([0-9]*): ]] && {
+    filename=${BASH_REMATCH[1]}
+    line=${BASH_REMATCH[2]}
+    column=${BASH_REMATCH[3]}
+}
+
+[[ -n ${vim} ]] && vim +${line} -c "execute \"normal /${INITIAL_QUERY}\n\"" ${O/:*}
+[[ -n ${emacsclient} ]] && emacsclient +${line}:${column} -n  ${O/:*}
+[[ -n ${editor} ]] && ${EDITOR} +${line}:${column} ${O/:*}
