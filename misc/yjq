@@ -28,5 +28,5 @@ python3 -c 'import yaml,json,sys;print(json.dumps(yaml.load(sys.stdin), indent=T
 if [[ -n ${json} ]];then
     jq '.' ${TMP}
 else
-    python3 -c 'import yaml,json,sys;print(yaml.dump(json.load(sys.stdin)))' 2>/dev/null < ${TMP} || cat ${TMP}
+    python3 -c 'import yaml,json,sys;print(yaml.dump(json.load(sys.stdin)))' < ${TMP} || jq '.' ${TMP}
 fi
