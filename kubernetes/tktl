@@ -107,7 +107,9 @@ for x in sorted(ret.items(), key=lambda p: p[1]['started']):
     print("\033[1;%dm%s\033[0;0m" % (x[1]['color'], x[0].replace("step-", "")))
 EOF
 ) | fzf --ansi --header "Choose a container." --tac -1 ${containeri} \
-    --preview "kubectl logs ${podName} -c step-{}")
+    --preview "kubectl get pod ${podName} -o json | \
+                       jq -C '.status.containerStatuses[], .status.initContainerStatuses[] | select(.name == \"step-{}\")' && \
+                       kubectl logs ${podName} -c step-{}")
     [[ -n ${containers} ]] && containers=(-c step-${containers})
 else
     containers=(--all-containers --max-log-requests=10)
