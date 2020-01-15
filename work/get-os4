@@ -46,7 +46,7 @@ EOF
 }
 
 function releaseyamlinstall {
-    osinstall=https://osinstall.chmouel.com/release/nightly.yaml
+    osinstall=https://osinstall.chmouel.com/release/pipeline/nightly.yaml
     curl -sILf -o/dev/null -f ${osinstall} && yaml=${osinstall}
 
     [[ -z ${yaml} ]] && {
