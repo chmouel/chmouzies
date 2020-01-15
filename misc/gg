@@ -1,17 +1,19 @@
 #!/usr/bin/env bash
 set -eu
-vim= emacsclient= line= column= O= editor= all= editall=
+loop=yes vim=yes emacsclient= line= column= O= editor= all= editall=
 
 TMP=$(mktemp /tmp/.mm.XXXXXX)
 clean() { rm -f ${TMP}; }
 trap clean EXIT
 
-while getopts "avme" o; do
+while getopts "anmet:" o; do
     case "${o}" in
+        t)
+            TMP=${OPTARG};;
         a)
-            editall=yes;;
-        v)
-            vim=yes;;
+            loop=;editall=yes;;
+        n)
+            vim=;;
         m)
             emacsclient=yes;;
         e)
@@ -55,6 +57,15 @@ if [[ -n ${editall} ]];then
     match=($(${RG_PREFIX} --color=never  ${QUERY}|grep -Eo '^([^:]*?):([0-9]*):([0-9]*)'))
 else
     match=($(echo ${RES}|grep -Eo '^([^:]*?):([0-9]*):([0-9]*)'))
+fi
+
+if [[ -n ${loop} ]];then
+    edit "${match[0]}" "$QUERY"
+    while True;do
+        ${0} -t ${TMP} ${QUERY}
+        QUERY=$(cat ${TMP})
+        read
+    done
 fi
 
 for r in ${match[@]};do
