@@ -20,6 +20,8 @@ for branch in release-next master;do
     git reset --hard openshift/${branch}
 done
 
+git checkout -B master upstream/master
+
 git checkout master
 git reset --hard upstream/master
 
