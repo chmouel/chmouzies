@@ -1,13 +1,20 @@
 #!/usr/bin/env bash
-titleonly=
+set -ue
+createbranch=yes
+commitmessage=
+
+git rev-parse --show-toplevel 2>/dev/null >/dev/null || {
+    echo "This is not a GIT directory"
+    exit 1
+}
 
 while getopts "cb" o; do
     case "${o}" in
         c)
             commitmessage=t
             ;;
-        b)
-            createbranch=t
+        n)
+            createbranch=
             ;;
         *)
             echo "Invalid option"; exit 1;
@@ -20,19 +27,22 @@ shift $((OPTIND-1))
 ARGS=${@}
 [[ -n ${@} ]] && ARGS="-q $@"
 
-#title=$(osascript -e 'tell application "Firefox" to return name of windows as text')
-title=$(hub issue|fzf -1 ${ARGS} --header "Choose a GitHUB Issue" --tac --preview="hub issue show \`echo {}|sed 's/#\([0-9]*\).*/\1/'\`")
+[[ -n ${commitmessage} && -z ${ARGS} && $(basename $(git symbolic-ref -q HEAD)) =~ issue-([0-9]*) ]] && {
+    ARGS="-q ${BASH_REMATCH[1]}"
+}
+
+title=$(hub issue -f "%i %t%n"|sed -e 's/`//g'|fzf -1 ${ARGS} --header "Choose a GitHUB Issue" --preview="hub issue show \`echo '{}'|sed 's/#\([0-9]*\).*/\1/'\`")
 number=$(echo $title|sed 's/[ ]*#\([0-9]*\).*/\1/')
 
-if [[ ${commitmessage} ]];then
-    echo $title|sed -r 's/[ ]*#[0-9]+[ ]*//;'
-    echo
-    echo "Closes #$number"
+if [[ -n ${commitmessage} ]];then
+    echo $title|sed -r 's/[ ]*#[0-9]+[ ]*//;' 
+    echo 
+    echo "Closes #$number" 
     exit
 fi
 
 prefix=$(echo "$title"|sed -r 's,kind/\w+,,;s/help wanted//;s/[ ]*#(.*)/\L\1/;s/ [ ]*/ /g;s/[ ]*$//;s/^[ ]*//;s/ /-/g;s,\(/\`||:|;|"|\|\),,g')
-prefix=$(echo "$prefix"|awk -v len=25 '{ if (length($0) > len) print substr($0, 1, len-3); else print; }')
+prefix=$(echo "$prefix"|awk -v len=60 '{ if (length($0) > len) print substr($0, 1, len-3); else print; }')
 [[ $prefix == *- ]] && prefix=$(echo ${prefix}| sed 's/-$//')
 
 
