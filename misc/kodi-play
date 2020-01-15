@@ -1,6 +1,6 @@
 #!/bin/bash
 #set url and port to the xbmc box webservice
-XBMC_HOST="http://citron.local:8080"
+XBMC_HOST="http://kodi.local:8080"
 
 if [ "$1" = "" ]; then
  echo -n "Insert URL: "
@@ -21,6 +21,6 @@ else
   payload='{ "jsonrpc": "2.0", "method": "Player.Open", "params": { "item": { "file": "'${url}'" }}, "id": 1 }'
 fi
 
-curl -v -u xbmc:password -d "$payload" -H "Content-type:application/json" -X POST "${XBMC_HOST}/jsonrpc"
+curl -v -u xbmc:password -d "$payload" -H "Content-type:application/json" "${XBMC_HOST}/jsonrpc"
 
 xbmc-send Pause
