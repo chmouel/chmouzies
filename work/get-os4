@@ -46,10 +46,15 @@ EOF
 }
 
 function releaseyamlinstall {
-    yaml=https://raw.githubusercontent.com/openshift/tektoncd-pipeline/release-next/openshift/release/tektoncd-pipeline-nightly.yaml
-    curl -o/dev/null -f ${yaml} || {
-        stable_version=$(curl -s https://api.github.com/repos/tektoncd/pipeline/releases | python -c "import sys, json;x=json.load(sys.stdin);print(x[0]['tag_name'])")
-        yaml=https://raw.githubusercontent.com/openshift/tektoncd-pipeline/release-${stable_version}/openshift/release/tektoncd-pipeline-${stable_version}.yaml
+    osinstall=https://osinstall.chmouel.com/release/nightly.yaml
+    curl -sILf -o/dev/null -f ${osinstall} && yaml=${osinstall}
+
+    [[ -z ${yaml} ]] && {
+        yaml=https://raw.githubusercontent.com/openshift/tektoncd-pipeline/release-next/openshift/release/tektoncd-pipeline-nightly.yaml
+        curl -sILf -o/dev/null -f ${yaml} || {
+            stable_version=$(curl -s https://api.github.com/repos/tektoncd/pipeline/releases | python -c "import sys, json;x=json.load(sys.stdin);print(x[0]['tag_name'])")
+            yaml=https://raw.githubusercontent.com/openshift/tektoncd-pipeline/release-${stable_version}/openshift/release/tektoncd-pipeline-${stable_version}.yaml
+        }
     }
     echo "Installing: $(basename ${yaml})"
     [[ -n ${reinstall} ]]  && { oc delete -f ${yaml} || true ;}
