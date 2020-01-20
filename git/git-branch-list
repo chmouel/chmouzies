@@ -1,1 +1,107 @@
-git for-each-ref --sort=-committerdate  --count=10 --format='%(align:1,20)%(color:bold yellow)%(refname:short) %(color:reset)%(committerdate:relative)%(end) %(align:50,right) %(color:white)%(upstream:lstrip=2) -- %(color:italic)%(authoremail) %(contents:subject)%(end)' refs/heads/
+#!/usr/bin/env bash
+# Original version from https://raw.githubusercontent.com/Osse/git-scripts/master/git-brv
+# Chmouel: added github status with -s
+
+showstatus=
+while getopts "s" o; do
+    case "${o}" in
+        s)
+            showstatus=yes
+            ;;
+        *)
+            echo "Invalid option"; exit 1;
+            ;;
+    esac
+done
+shift $((OPTIND-1))
+
+commit_status() {
+curl -s -L -H "Authorization: Bearer $(git config --get github.oauth-token)" https://api.github.com/repos/tektoncd/cli/commits/${1}/status| python3 <(cat  <<EOF    
+import json,sys
+jeez=json.loads(sys.stdin.read())
+for j in jeez['statuses']:
+   if j['context'] == 'tide':
+      continue
+   if j['state'] == 'pending':
+      print("\033[1;33m🏋\033[0;0m")
+      sys.exit()
+   elif j['state'] == 'failure':
+      print("\033[1;31m☠\033[0;0m")
+      sys.exit()
+
+print("\033[1;32m✔\033[0;0m")
+EOF
+)
+}
+
+if ! (( BASH_VERSINFO[0] > 4 ||
+        BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] >= 2 )); then
+    printf >&2 'This script requires bash 4.2 or newer\n'
+    exit 1
+fi
+
+if [[ -t 1 ]]; then
+    shopt -s checkwinsize
+    COLUMNS=$(tput cols)
+    color_branch_local=$(git config --get-color color.branch.local normal)
+    color_branch_current=$(git config --get-color color.branch.current green)
+    color_diff_commit=$(git config --get-color color.diff.commit yellow)
+    color_branch_upstream=$(git config --get-color color.branch.upstream blue)
+    reset=$(tput sgr0)
+fi
+
+
+declare -A upstream date hash message status
+eval "$(
+    git for-each-ref --format='upstream[%(refname:short)]=%(upstream:short)' \
+                     --shell 'refs/heads/**'
+)"
+
+for b in "${!upstream[@]}"; do
+    blen=${#b} ulen=${#upstream[$b]}
+    (( bwidth = blen > bwidth ? blen : bwidth ))
+    (( uwidth = ulen > uwidth ? ulen : uwidth ))
+    IFS=/ read -r 'date[$b]' 'hash[$b]' 'message[$b]' < <(
+        git log --no-walk=unsorted --format=%ct/%h/%s "$b" --
+    )
+    [[ -n ${showstatus} ]] &&
+        status[$b]="$(commit_status $(git log -n1 --format=format:%H ${b}))"
+    hlen=${#hash[$b]}
+    (( hwidth = hlen > hwidth ? hlen : hwidth ))
+done
+
+mapfile -t ordered < <(
+    for b in "${!date[@]}"; do
+        printf '%d\t%s\n' "${date[$b]}" "$b"
+    done | sort -rn | cut -f2-
+)
+
+current=$(git symbolic-ref -q --short HEAD)
+
+for b in "${ordered[@]}"; do
+    branch_color=$color_branch_local
+    if [[ $b = "$current" ]]; then
+        branch_color=$color_branch_current
+    fi
+    if [[ -t 1 ]]; then
+        msg=${message[$b]:0:COLUMNS-bwidth-uwidth-hwidth-14}
+    else
+        msg=${message[$b]}
+    fi
+    if [[ -n ${showstatus} ]];then
+        printf '%s %(%Y-%m-%d)T %s%*s%s %s%*s%s %s%*s%s %s\n' \
+               "${status[$b]} " \
+               "${date[$b]}" \
+               "$branch_color" "-$bwidth" "$b" "$reset" \
+               "$color_branch_upstream" "-$uwidth" "${upstream[$b]}" "$reset" \
+               "$color_diff_commit" "-$hwidth" "${hash[$b]}" "$reset" \
+               "$msg"
+    else
+        printf '%(%Y-%m-%d)T %s%*s%s %s%*s%s %s%*s%s %s\n' \
+               "${date[$b]}" \
+               "$branch_color" "-$bwidth" "$b" "$reset" \
+               "$color_branch_upstream" "-$uwidth" "${upstream[$b]}" "$reset" \
+               "$color_diff_commit" "-$hwidth" "${hash[$b]}" "$reset" \
+               "$msg"
+   fi
+done
