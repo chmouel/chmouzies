@@ -2,6 +2,8 @@
 # Original version from https://raw.githubusercontent.com/Osse/git-scripts/master/git-brv
 # Chmouel: added github status with -s
 
+# Set your GitHub token here, or store it in your .gitconfig
+GITHUB_TOKEN=$(git config --get github.oauth-token)
 showstatus=
 while getopts "s" o; do
     case "${o}" in
@@ -16,7 +18,7 @@ done
 shift $((OPTIND-1))
 
 commit_status() {
-curl -s -L -H "Authorization: Bearer $(git config --get github.oauth-token)" https://api.github.com/repos/tektoncd/cli/commits/${1}/status| python3 <(cat  <<EOF    
+curl -s -L -H "Authorization: Bearer ${GITHUB_TOKEN}" https://api.github.com/repos/tektoncd/cli/commits/${1}/status| python3 <(cat  <<EOF    
 import json,sys
 jeez=json.loads(sys.stdin.read())
 for j in jeez['statuses']:
