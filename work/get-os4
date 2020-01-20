@@ -56,9 +56,11 @@ function releaseyamlinstall {
             yaml=https://raw.githubusercontent.com/openshift/tektoncd-pipeline/release-${stable_version}/openshift/release/tektoncd-pipeline-${stable_version}.yaml
         }
     }
-    echo "Installing: $(basename ${yaml})"
+    echo ">>> Installing: $(basename ${yaml})"
     [[ -n ${reinstall} ]]  && { oc delete -f ${yaml} || true ;}
     oc create -f ${yaml}
+	echo ">>>  Installing Triggers"
+	oc create -f https://storage.googleapis.com/tekton-releases/triggers/latest/release.yaml
 }
 
 function koinstall {
