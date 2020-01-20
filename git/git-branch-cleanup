@@ -54,7 +54,7 @@ for branch in $(git branch -l -q|sed -r 's/^(\*)? //;s/^ //');do
                 DONED+=(${branch})
                 read -n1 -e -p "Branch ${branch} is in ${MASTER}, do you want to delete [Ny]: " answer
                 [[ ${answer,,} == y ]] && {
-                    echo git branch -D ${branch}
+                    git branch -D ${branch}
                 }
             }
         done
