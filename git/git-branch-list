@@ -66,9 +66,11 @@ for b in "${!upstream[@]}"; do
     IFS=/ read -r 'date[$b]' 'hash[$b]' 'message[$b]' < <(
         git log --no-walk=unsorted --format=%ct/%h/%s "$b" --
     )
-    [[ -n ${showstatus} ]] &&
-        status[$b]="$(commit_status $(git log -n1 --format=format:%H ${b}))"
     hlen=${#hash[$b]}
+    [[ -n ${showstatus} ]] && {
+        status[$b]="$(commit_status $(git log -n1 --format=format:%H ${b}))"
+        (( hlen+=2 ))
+    }
     (( hwidth = hlen > hwidth ? hlen : hwidth ))
 done
 
