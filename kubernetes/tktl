@@ -55,7 +55,7 @@ kubectl get tr 2>/dev/null >/dev/null || {
 if [[ -n ${last} ]];then
     task=$(kubectl get tr -o name --sort-by=.metadata.creationTimestamp|sed 's,.*/,,'|tail -1)
 else
-    task=$(kubectl get tr -o json --sort-by=.metadata.creationTimestamp| python <(cat  <<EOF
+    task=$(kubectl get tr -o json --sort-by=.metadata.creationTimestamp| python3 <(cat  <<EOF
 import json,sys
 jeez=json.loads(sys.stdin.read())
 def colit(condition, name):
@@ -83,7 +83,7 @@ podName=$(kubectl get tr -o json ${task} | jq -r '.status.podName')
 if [[ -n ${choose_containers} ]];then
     [[ -n ${chooseContainerArg} ]] && containeri="-q ${chooseContainerArg}"
 
-    containers=$(kubectl get pod ${podName} -o json|python <(cat  <<EOF
+    containers=$(kubectl get pod ${podName} -o json|python3 <(cat  <<EOF
 import json,sys,datetime
 jeez=json.loads(sys.stdin.read())
 ret={}
@@ -102,8 +102,8 @@ for i in jeez['spec']['containers']:
         elif 'running' in c['state']:
            k = 'running'
            color = 34
-        else:
-            print(c['state'])
+        else:           
+           continue
         ret[c['name']] = {'started':
             datetime.datetime.strptime(c['state'][k]['startedAt'][:-1],'%Y-%m-%dT%H:%M:%S'),
             'color': color, 'state': c['state']}
