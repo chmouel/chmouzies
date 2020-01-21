@@ -25,11 +25,6 @@ done
 [[ -n ${1} ]] && { profile=$1; }
 [[ -n ${2} ]] && { prefixk=$2; }
 
-export KUBECONFIG=~/.kube/config.${prefixk}
-curl -# -f ${BASE_URL}/${profile}/kubeconfig.gpg | gpg --quiet --decrypt > ${KUBECONFIG}
-echo "export KUBECONFIG=${KUBECONFIG}"
-
-
 function operatorinstall() {
     cat <<EOF | oc apply -f-
 apiVersion: operators.coreos.com/v1alpha1
@@ -45,9 +40,28 @@ spec:
 EOF
 }
 
+function os4_add_htpasswd_auth() {
+    ! oc get secret htpasswd-secret -n openshift-config 2>/dev/null >/dev/null  || return
+    
+    oc create secret generic htpasswd-secret \
+       --from-file=htpasswd=${HOME}/.kube/htpass -n openshift-config
+    oc patch oauth cluster -n openshift-config --type merge --patch "spec:
+  identityProviders:
+  - htpasswd:
+      fileData:
+        name: htpasswd-secret
+    mappingMethod: claim
+    name: htpasswd
+    type: HTPasswd
+"
+    oc adm policy add-cluster-role-to-user cluster-admin "$(head ~/.kube/htpass|awk -F: '{print $1}')"
+}
+
+
 function releaseyamlinstall {
     osinstall=https://osinstall.chmouel.com/release/pipeline/nightly.yaml
     curl -sILf -o/dev/null -f ${osinstall} && yaml=${osinstall}
+
 
     [[ -z ${yaml} ]] && {
         yaml=https://raw.githubusercontent.com/openshift/tektoncd-pipeline/release-next/openshift/release/tektoncd-pipeline-nightly.yaml
@@ -61,6 +75,10 @@ function releaseyamlinstall {
     oc create -f ${yaml}
 	echo ">>>  Installing Triggers"
 	oc create -f https://storage.googleapis.com/tekton-releases/triggers/latest/release.yaml
+
+	echo ">>>  Installing Dashboard"
+	oc create -f https://github.com/tektoncd/dashboard/releases/download/v0.4.1/dashboard_latest_openshift-tekton-dashboard-release.yaml
+	oc expose service tekton-dashboard -n tekton-pipelines ; oc apply -n tekton-pipelines -f <(oc get route tekton-dashboard  -o json |jq -r '.spec |= . + {tls: {"insecureEdgeTerminationPolicy": "Redirect", "termination": "edge"}}')
 }
 
 function koinstall {
@@ -93,17 +111,19 @@ function koinstall {
     fi
 }
 
+
+export KUBECONFIG=~/.kube/config.${prefixk}
+curl -# -f ${BASE_URL}/${profile}/kubeconfig.gpg | gpg --quiet --decrypt > ${KUBECONFIG}
+echo "export KUBECONFIG=${KUBECONFIG}"
+
+os4_add_htpasswd_auth
+
 if [[ -n ${koinstall} ]]; then
     koinstall
 elif [[ -n ${releaseyaml} ]];then
     releaseyamlinstall
 elif [[ -n ${operator} ]];then
     operatorinstall
-else
-    exit
 fi
 
-sleep 3
 
-oc project tekton-pipelines
-oc get pod -owide
