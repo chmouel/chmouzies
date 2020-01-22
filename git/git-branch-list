@@ -5,10 +5,15 @@
 # Set your GitHub token here, or store it in your .gitconfig
 GITHUB_TOKEN=$(git config --get github.oauth-token)
 showstatus=
-while getopts "s" o; do
+nocolor=
+
+while getopts "sc" o; do
     case "${o}" in
         s)
             showstatus=yes
+            ;;
+        c)
+            nocolor=yes
             ;;
         *)
             echo "Invalid option"; exit 1;
@@ -42,7 +47,7 @@ if ! (( BASH_VERSINFO[0] > 4 ||
     exit 1
 fi
 
-if [[ -t 1 ]]; then
+if [[ -z ${nocolor} ]]; then
     shopt -s checkwinsize
     COLUMNS=$(tput cols)
     color_branch_local=$(git config --get-color color.branch.local normal)
@@ -87,10 +92,10 @@ for b in "${ordered[@]}"; do
     if [[ $b = "$current" ]]; then
         branch_color=$color_branch_current
     fi
-    if [[ -t 1 ]]; then
-        msg=${message[$b]:0:COLUMNS-bwidth-uwidth-hwidth-14}
-    else
+    if [[ -n ${nocolor} ]]; then
         msg=${message[$b]}
+    else
+        msg=${message[$b]:0:COLUMNS-bwidth-uwidth-hwidth-14}
     fi
     if [[ -n ${showstatus} ]];then
         printf '%s %(%Y-%m-%d)T %s%*s%s %s%*s%s %s%*s%s %s\n' \
