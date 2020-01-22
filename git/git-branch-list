@@ -6,9 +6,15 @@
 GITHUB_TOKEN=$(git config --get github.oauth-token)
 showstatus=
 nocolor=
+fzf=
 
-while getopts "sc" o; do
+while getopts "scf" o; do
     case "${o}" in
+        f)
+            fzf=yes
+            git checkout $(echo $($0|fzf --ansi)|awk -F" " '{print $2}')
+            exit
+            ;;
         s)
             showstatus=yes
             ;;
