@@ -8,6 +8,9 @@ operator=
 releaseyaml=
 koinstall=
 
+TRIGGER_YAML=https://storage.googleapis.com/tekton-releases/triggers/latest/release.yaml
+DASHBOARD_YAML=https://github.com/tektoncd/dashboard/releases/download/v0.4.1/dashboard_latest_openshift-tekton-dashboard-release.yaml
+
 BASE_URL=https://osinstall.chmouel.com
 
 while getopts ':korR' arg;do
@@ -41,7 +44,7 @@ EOF
 }
 
 function os4_add_htpasswd_auth() {
-    ! oc get secret htpasswd-secret -n openshift-config 2>/dev/null >/dev/null  || return
+    oc get secret htpasswd-secret -n openshift-config 2>/dev/null >/dev/null  && return || true
     
     oc create secret generic htpasswd-secret \
        --from-file=htpasswd=${HOME}/.kube/htpass -n openshift-config
@@ -57,6 +60,10 @@ function os4_add_htpasswd_auth() {
     oc adm policy add-cluster-role-to-user cluster-admin "$(head ~/.kube/htpass|awk -F: '{print $1}')"
 }
 
+function recreate() {
+    oc delete -f ${1} 2>/dev/null >/dev/null || true
+    oc create -f ${1}
+}
 
 function releaseyamlinstall {
     osinstall=https://osinstall.chmouel.com/release/pipeline/nightly.yaml
@@ -71,14 +78,14 @@ function releaseyamlinstall {
         }
     }
     echo ">>> Installing: $(basename ${yaml})"
-    [[ -n ${reinstall} ]]  && { oc delete -f ${yaml} || true ;}
-    oc create -f ${yaml}
+    recreate ${yaml}
+    
 	echo ">>>  Installing Triggers"
-	oc create -f https://storage.googleapis.com/tekton-releases/triggers/latest/release.yaml
+	recreate ${TRIGGER_YAML}
 
-	echo ">>>  Installing Dashboard"
-	oc create -f https://github.com/tektoncd/dashboard/releases/download/v0.4.1/dashboard_latest_openshift-tekton-dashboard-release.yaml
-	oc expose service tekton-dashboard -n tekton-pipelines ; oc apply -n tekton-pipelines -f <(oc get route tekton-dashboard  -o json |jq -r '.spec |= . + {tls: {"insecureEdgeTerminationPolicy": "Redirect", "termination": "edge"}}')
+	# echo ">>>  Installing Dashboard"
+	# recreate ${DASHBOARD_YAML}
+	#oc expose service tekton-dashboard -n tekton-pipelines ; oc apply -n tekton-pipelines -f <(oc get route tekton-dashboard  -o json |jq -r '.spec |= . + {tls: {"insecureEdgeTerminationPolicy": "Redirect", "termination": "edge"}}')
 }
 
 function koinstall {
