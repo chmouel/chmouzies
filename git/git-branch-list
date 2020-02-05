@@ -8,11 +8,13 @@ showstatus=
 nocolor=
 fzf=
 
-while getopts "scf" o; do
+while getopts "kscf" o; do
     case "${o}" in
         f)
             fzf=yes
-            git checkout $(echo $($0|fzf --ansi)|awk -F" " '{print $2}')
+            args=${@/-f/}
+            [[ $args != -* ]] && args="-${args}"
+            git checkout $(echo $($0 ${args}|fzf --ansi)|awk -F" " '{print $2}')
             exit
             ;;
         s)
@@ -29,7 +31,7 @@ done
 shift $((OPTIND-1))
 
 commit_status() {
-curl -s -L -H "Authorization: Bearer ${GITHUB_TOKEN}" https://api.github.com/repos/tektoncd/cli/commits/${1}/status| python3 <(cat  <<EOF    
+curl -s -L -H "Authorization: Bearer ${GITHUB_TOKEN}" https://api.github.com/repos/tektoncd/cli/commits/${1}/status| python3 <(cat  <<EOF
 import json,sys
 jeez=json.loads(sys.stdin.read())
 for j in jeez['statuses']:
