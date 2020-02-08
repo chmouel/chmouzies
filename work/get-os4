@@ -11,7 +11,7 @@ koinstall=
 TRIGGER_YAML=https://storage.googleapis.com/tekton-releases/triggers/latest/release.yaml
 DASHBOARD_YAML=https://github.com/tektoncd/dashboard/releases/download/v0.4.1/dashboard_latest_openshift-tekton-dashboard-release.yaml
 
-BASE_URL=https://osinstall.chmouel.com
+BASE_URL=https://uploader-ci-openshift-pipelines.apps.devint.openshiftknativedemo.org/devreinstall/
 
 while getopts ':korR' arg;do
     case $arg in
@@ -45,7 +45,7 @@ EOF
 
 function os4_add_htpasswd_auth() {
     oc get secret htpasswd-secret -n openshift-config 2>/dev/null >/dev/null  && return || true
-    
+
     oc create secret generic htpasswd-secret \
        --from-file=htpasswd=${HOME}/.kube/htpass -n openshift-config
     oc patch oauth cluster -n openshift-config --type merge --patch "spec:
@@ -79,7 +79,7 @@ function releaseyamlinstall {
     }
     echo ">>> Installing: $(basename ${yaml})"
     recreate ${yaml}
-    
+
 	echo ">>>  Installing Triggers"
 	recreate ${TRIGGER_YAML}
 
@@ -132,5 +132,3 @@ elif [[ -n ${releaseyaml} ]];then
 elif [[ -n ${operator} ]];then
     operatorinstall
 fi
-
-
