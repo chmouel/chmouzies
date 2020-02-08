@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+farg=""
+klogopt=""
+kgetpodopt=""
+
+while getopts "rf" o; do
+    case "${o}" in
+        r)
+            kgetpodopt="${kgetpodopt} --field-selector status.phase=Running"
+            ;;
+        f)
+            klogopt="${kopt} -f"
+            ;;
+        *)
+            echo "Invalid option"; exit 1;
+            ;;
+    esac
+done
+shift $((OPTIND-1))
+
+if [[ -n ${1} ]];then
+    farg="-q ${1}"
+    shift
+fi
+
+POD=$(kubectl get pod --no-headers ${kgetpodopt} --sort-by=.metadata.creationTimestamp|fzf --tac --layout=reverse ${farg} --height=10%|awk '{print $1}')
+if [[ -z ${POD} ]];then
+    exit
+fi
+
+kubectl logs --max-log-requests=10 --all-containers ${POD} ${klogopt}
