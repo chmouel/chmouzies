@@ -1,25 +1,49 @@
 #!/usr/bin/env bash
+set -eu
+
 farg=""
 klogopt=""
 kgetpodopt=""
+onlypod=
 
-while getopts "rf" o; do
+[[ $(basename $0) == GP ]] && onlypod=yes
+
+cat <<EOF
+ocla substring
+
+This will let you choose a pod with fzf and show logs
+
+-o don't show logs, only output pod
+-r filter to only running pods
+-f show logs and follow them
+-1 choose the first one found in substring
+
+EOF
+
+while getopts "rf1o" o; do
     case "${o}" in
+        o)
+            onlypod=yes;;
+        1)
+            farg="${farg} -1";;
         r)
             kgetpodopt="${kgetpodopt} --field-selector status.phase=Running"
             ;;
         f)
-            klogopt="${kopt} -f"
+            klogopt="${klogopt} -f"
+            kgetpodopt="--field-selector status.phase=Running"
             ;;
         *)
             echo "Invalid option"; exit 1;
+
             ;;
     esac
 done
 shift $((OPTIND-1))
 
-if [[ -n ${1} ]];then
-    farg="-q ${1}"
+ARG1=${1:-}
+if [[ -n ${ARG1} ]];then
+    farg="${farg} -q ${ARG1}"
     shift
 fi
 
@@ -28,4 +52,8 @@ if [[ -z ${POD} ]];then
     exit
 fi
 
-kubectl logs --max-log-requests=10 --all-containers ${POD} ${klogopt}
+if [[ -n ${onlypod} ]];then
+	echo $POD
+else
+	kubectl logs --max-log-requests=20 --all-containers ${POD} ${klogopt}
+fi
