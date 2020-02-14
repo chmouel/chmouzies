@@ -8,6 +8,8 @@ onlypod=
 
 [[ $(basename $0) == GP ]] && onlypod=yes
 
+
+function help() {
 cat <<EOF
 ocla substring
 
@@ -19,8 +21,9 @@ This will let you choose a pod with fzf and show logs
 -1 choose the first one found in substring
 
 EOF
+}
 
-while getopts "rf1o" o; do
+while getopts "rf1oh" o; do
     case "${o}" in
         o)
             onlypod=yes;;
@@ -33,9 +36,11 @@ while getopts "rf1o" o; do
             klogopt="${klogopt} -f"
             kgetpodopt="--field-selector status.phase=Running"
             ;;
+        h)
+            help;;
         *)
             echo "Invalid option"; exit 1;
-
+            help
             ;;
     esac
 done
