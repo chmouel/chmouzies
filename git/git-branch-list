@@ -8,13 +8,29 @@ showstatus=
 nocolor=
 fzf=
 
-while getopts "kscf" o; do
+while getopts "kscfd" o; do
     case "${o}" in
         f)
             fzf=yes
             args=${@/-f/}
             [[ $args != -* ]] && args="-${args}"
-            git checkout $(echo $($0 ${args}|fzf --layout=reverse --height=20% --ansi)|awk -F" " '{print $2}')
+            git checkout $(echo $($0 ${args}|fzf --layout=reverse --height=20% --ansi)|awk -F" " '{print $1}')
+            exit
+            ;;
+        d)
+            chosen=$($0|fzf -m --layout=reverse --height=20% --ansi|tr '\n' '~|~')
+            [[ -z ${chosen} ]] && exit 0
+
+            oIFS="$IFS"
+            IFS="~|~"
+            for choix in ${chosen};do
+			    choix=$(echo ${choix}|awk '{print $1}')
+                read -n1 -p "Do you want to delete '${choix}'? " answer
+                echo
+                [[ ${answer,,} == y ]] && git branch -D ${choix}
+            done
+
+            IFS="${oIFS}"
             exit
             ;;
         s)
