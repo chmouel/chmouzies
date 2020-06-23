@@ -52,6 +52,8 @@ if [[ -e ${ARG} ]];then
 
     if [[ -z ${SHA} ]];then
         BRANCH=$(git rev-parse --short HEAD)
+    else
+        BRANCH=${SHA}
     fi
 
     base_repo=$(git rev-parse --show-toplevel)
