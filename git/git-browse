@@ -1,12 +1,18 @@
 #!/usr/bin/env bash
 function readlinkf() {
-    python -c 'import os,sys;print os.path.realpath(sys.argv[1])' $1
+    python -c 'import os,sys;print(os.path.realpath(sys.argv[1]))' $1
 }
 
 
+BROWSER=true
 SHA=
 if [[ $1 == "-m" ]];then
     SHA=master
+    shift
+fi
+
+if [[ $1 == "-u" ]];then
+    BROWSER=
     shift
 fi
 
@@ -62,6 +68,6 @@ fi
 
 echo ${URL}
 
-if [[ -x /usr/bin/open ]];then
+if [[ -n ${BROWSER} && -x /usr/bin/open ]];then
     /usr/bin/open ${URL}
 fi
