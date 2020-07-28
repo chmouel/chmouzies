@@ -23,8 +23,12 @@ This will let you choose a pod with fzf and show logs
 EOF
 }
 
-while getopts "rf1oh" o; do
+while getopts "n:rf1oh" o; do
     case "${o}" in
+		n)
+            kgetpodopt="${kgetpodopt} -n ${OPTARG}"
+            klogopt="${klogopt} -n ${OPTARG}"
+			;;
         o)
             onlypod=yes;;
         1)
@@ -34,7 +38,7 @@ while getopts "rf1oh" o; do
             ;;
         f)
             klogopt="${klogopt} -f"
-            kgetpodopt="--field-selector status.phase=Running"
+            kgetpodopt="${kgetpodopt} --field-selector status.phase=Running"
             ;;
         h)
             help;;
@@ -52,7 +56,7 @@ if [[ -n ${ARG1} ]];then
     shift
 fi
 
-POD=$(kubectl get pod --no-headers ${kgetpodopt} --sort-by=.metadata.creationTimestamp|fzf --tac --layout=reverse ${farg} --height=10%|awk '{print $1}')
+POD=$(kubectl get pod --no-headers ${kgetpodopt} --sort-by=.metadata.creationTimestamp|fzf -1 --tac --layout=reverse ${farg} --height=10%|awk '{print $1}')
 if [[ -z ${POD} ]];then
     exit
 fi
