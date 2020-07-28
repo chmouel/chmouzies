@@ -15,7 +15,7 @@ oifs=${IFS}
 IFS="
 "
 
-for line in $(grep "## INSERT" ${fname});do
+for line in $(grep "## INSERT" $(basename ${fname}));do
     F2=$(<${TMP})
 
     scriptfile=${line//## INSERT /}
