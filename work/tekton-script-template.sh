@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# https://blog.chmouel.com/2020/07/28/tekton-yaml-templates-and-script-feature/
 set -eu
 fname=${1:-template.yaml}
 
