@@ -8,12 +8,13 @@ trap clean EXIT
 
 cat ${fname} > ${TMP}
 
-cd $(dirname $(readlink -f ${0}))
+cd $(dirname $(readlink -f ${fname}))
 
 
 oifs=${IFS}
 IFS="
 "
+
 for line in $(grep "## INSERT" ${fname});do
     F2=$(<${TMP})
 
