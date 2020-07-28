@@ -21,7 +21,7 @@ for line in $(grep "## INSERT" ${fname});do
     scriptfile=${scriptfile//[ ]/}
     echo "'${scriptfile}'"
     [[ -e ${scriptfile} ]] || { echo "Could not find ${scriptfile}"; continue ;}
-    indentation="$(grep -B1 ${line} template.yaml|head -1|gsed 's/^\([ ]*\).*/\1/')"
+    indentation="$(grep -B1 ${line} template.yaml|head -1|sed 's/^\([ ]*\).*/\1/')"
     indentation="${indentation}    "
     F1=$(sed "s/^/${indentation}/" ${scriptfile})
     cat <(echo "${F2//${line}/$F1}") > ${TMP}
