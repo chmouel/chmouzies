@@ -20,7 +20,6 @@ for line in $(grep "## INSERT" ${fname});do
 
     scriptfile=${line//## INSERT /}
     scriptfile=${scriptfile//[ ]/}
-    echo "'${scriptfile}'"
     [[ -e ${scriptfile} ]] || { echo "Could not find ${scriptfile}"; continue ;}
     indentation="$(grep -B1 ${line} template.yaml|head -1|sed 's/^\([ ]*\).*/\1/')"
     indentation="${indentation}    "
