@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-set -e
+set -eu
 # set -x
 
 profile=chmouel
@@ -7,10 +7,13 @@ prefixk=os4
 operator=
 releaseyaml=
 koinstall=
+reinstall=
 
-TRIGGER_YAML=https://storage.googleapis.com/tekton-releases/triggers/latest/release.yaml
-DASHBOARD_YAML=https://github.com/tektoncd/dashboard/releases/download/v0.4.1/dashboard_latest_openshift-tekton-dashboard-release.yaml
+# PIPELINE_YAML=https://uploader-ci-openshift-pipelines.apps.devint.openshiftknativedemo.org/release/pipeline/pipeline-nightly.yaml
+PIPELINE_YAML=https://raw.githubusercontent.com/openshift/tektoncd-pipeline/release-next/openshift/release/tektoncd-pipeline-nightly.yaml
 
+# TRIGGER_YAML=https://uploader-ci-openshift-pipelines.apps.devint.openshiftknativedemo.org/release/pipeline/triggers-nightly.yaml
+TRIGGER_YAML=https://raw.githubusercontent.com/openshift/tektoncd-triggers/release-next/openshift/release/tektoncd-triggers-nightly.yaml
 BASE_URL=https://uploader-ci-openshift-pipelines.apps.devint.openshiftknativedemo.org/devreinstall/
 
 while getopts ':korR' arg;do
@@ -25,10 +28,11 @@ done
 
 (( OPTIND > 1 )) && shift $(( OPTIND - 1 ))
 
-[[ -n ${1} ]] && { profile=$1; }
-[[ -n ${2} ]] && { prefixk=$2; }
+first=${1:-};[[ -n ${first} ]] && profile=${first}
+second=${2:-};[[ -n ${second} ]] && prefixk=${second}
 
 function operatorinstall() {
+	[[ -n ${reinstall} ]] && oc delete subscription pipelines -n openshift-operators
     cat <<EOF | oc apply -f-
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
@@ -36,8 +40,8 @@ metadata:
   name: pipelines
   namespace: openshift-operators
 spec:
-  channel: dev-preview
-  name: tekton-operator
+  channel: canary
+  name: openshift-pipelines-operator
   source: community-operators
   sourceNamespace: openshift-marketplace
 EOF
@@ -66,9 +70,7 @@ function recreate() {
 }
 
 function releaseyamlinstall {
-    osinstall=https://osinstall.chmouel.com/release/pipeline/nightly.yaml
-    curl -sILf -o/dev/null -f ${osinstall} && yaml=${osinstall}
-
+    curl -sILf -o/dev/null -f ${PIPELINE_YAML} && yaml=${PIPELINE_YAML}
 
     [[ -z ${yaml} ]] && {
         yaml=https://raw.githubusercontent.com/openshift/tektoncd-pipeline/release-next/openshift/release/tektoncd-pipeline-nightly.yaml
@@ -82,10 +84,6 @@ function releaseyamlinstall {
 
 	echo ">>>  Installing Triggers"
 	recreate ${TRIGGER_YAML}
-
-	# echo ">>>  Installing Dashboard"
-	# recreate ${DASHBOARD_YAML}
-	#oc expose service tekton-dashboard -n tekton-pipelines ; oc apply -n tekton-pipelines -f <(oc get route tekton-dashboard  -o json |jq -r '.spec |= . + {tls: {"insecureEdgeTerminationPolicy": "Redirect", "termination": "edge"}}')
 }
 
 function koinstall {
