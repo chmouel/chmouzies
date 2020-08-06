@@ -26,10 +26,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--last", '-l', action="store_true", default=False)
 args = parser.parse_args(sys.argv[1:])
 
-shell = subprocess.run(
-    "oc whoami --show-server=true".split(" "),
-    stderr=subprocess.PIPE,
-    stdout=subprocess.PIPE)
+shell = subprocess.run("oc whoami --show-server=true".split(" "),
+                       stderr=subprocess.PIPE,
+                       stdout=subprocess.PIPE)
 
 if shell.returncode != 0 or 'api.ci.openshift.org' not in shell.stdout.decode(
 ):
@@ -59,12 +58,14 @@ for run in ciruns['items']:
         if x['name'] == 'JOB_SPEC':
             jobspec = json.loads(x['value'])
 
-    ret.append(
-        "#%s - @%s - %s - %s - %s" %
-        (jobspec['refs']['pulls'][0]['number'],
-         jobspec['refs']['pulls'][0]['author'], run['status']['startTime'],
-         run['metadata']['labels']['prow.k8s.io/job'],
-         run['metadata']['name']), )
+    ret.append("%s - %s/%s#%s - %s - %s" % (
+        run['status']['startTime'],
+        run['metadata']['labels']['prow.k8s.io/refs.org'],
+        run['metadata']['labels']['prow.k8s.io/refs.repo'],
+        run['metadata']['labels'].get('prow.k8s.io/refs.pull', ""),
+        "-".join(run['metadata']['labels']['prow.k8s.io/job'].split("-")[-2:]),
+        run['metadata']['name'],
+    ))
 
 if not ret:
     sys.exit(1)
@@ -82,7 +83,6 @@ else:
     r = p.stdout.decode().strip()
 
 pod_name = r.split(" ")[-1]
-job_type = r.split(" ")[-3]
 
 
 def get_log_container(namespace,
@@ -93,14 +93,15 @@ def get_log_container(namespace,
                       highlights=[]):
     since = ""
     retall = []
-    cmd = f"oc logs -n {namespace} {pod_name} -c {container_name} --follow"
-    print(cmd)
+    cmd = f"oc logs -n {namespace} {pod_name} -c {container_name}"
+    print(cmd + " --follow")
     while True:
         marktime = datetime.datetime.now().isoformat("T") + "Z"
         if since:
             cmd += " " + since
-        p = subprocess.run(
-            cmd.split(" "), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p = subprocess.run(cmd.split(" "),
+                           stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE)
         output = p.stdout.decode().strip()
         if not output:
             time.sleep(5)
@@ -133,7 +134,8 @@ ret = get_log_container(
     pod_name,
     "test",
     follow=True,
-    finish_on=".*Container setup in.*completed successfully.*",
+    finish_on=
+    ".*(Container setup in.*completed successfully|Reporting job state 'succeeded').*",
     highlights=[(".*Resolved source https.*", "cyan"),
                 (".*Build.*succeeded after \d+", "magenta"),
                 (".*completed successfully.*", "green"),
