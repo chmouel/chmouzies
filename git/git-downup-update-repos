@@ -8,7 +8,7 @@ changed=$(git status --porcelain)
 
 for remote in openshift upstream;do
     git remote |grep -q ${remote}  || { echo "you need a ${remote} remote"; exit 1 ;}
-    git fetch -a --tags ${remote}
+    git fetch -a --tags ${remote} --force
 done
 
 if [[ -n ${changed} ]];then

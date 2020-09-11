@@ -16,10 +16,12 @@ if [[ $1 == "-u" ]];then
     shift
 fi
 
-set -e
 UPSTREAM_NAME=$(git config forge.remote 2>/dev/null || echo origin)
 ORIGIN_REMOTE=$(git config remote.${UPSTREAM_NAME}.url)
+[[ -z ${ORIGIN_REMOTE} ]] && ORIGIN_REMOTE=$(git config remote.upstream.url)
+[[ -z ${ORIGIN_REMOTE} ]] && { echo "Could not detect your origin remote" ; exit 1;}
 ORIGIN_REMOTE=${ORIGIN_REMOTE/.git/}
+set -e
 
 if [[ ${ORIGIN_REMOTE} =~ git@gisthub.com:([0-9]+) ]];then
     url=https://gist.github.com/${BASH_REMATCH[1]}

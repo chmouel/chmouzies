@@ -8,16 +8,18 @@ operator=
 releaseyaml=
 koinstall=
 reinstall=
+nocopy=
 
 # PIPELINE_YAML=https://uploader-ci-openshift-pipelines.apps.devint.openshiftknativedemo.org/release/pipeline/pipeline-nightly.yaml
 PIPELINE_YAML=https://raw.githubusercontent.com/openshift/tektoncd-pipeline/release-next/openshift/release/tektoncd-pipeline-nightly.yaml
 
 # TRIGGER_YAML=https://uploader-ci-openshift-pipelines.apps.devint.openshiftknativedemo.org/release/pipeline/triggers-nightly.yaml
 TRIGGER_YAML=https://raw.githubusercontent.com/openshift/tektoncd-triggers/release-next/openshift/release/tektoncd-triggers-nightly.yaml
-BASE_URL=https://uploader-ci-openshift-pipelines.apps.devint.openshiftknativedemo.org/devreinstall/
+BASE_URL=https://uploader-cron.svc.ci.openshift.org/
 
-while getopts ':korR' arg;do
+while getopts ':korRn' arg;do
     case $arg in
+      (n) nocopy=yes;;
       (R) reinstall=yes ;;
       (o) operator=yes ;;
       (r) releaseyaml=yes ;;
@@ -65,8 +67,7 @@ function os4_add_htpasswd_auth() {
 }
 
 function recreate() {
-    oc delete -f ${1} 2>/dev/null >/dev/null || true
-    oc create -f ${1}
+    oc apply -f ${1}
 }
 
 function releaseyamlinstall {
@@ -118,9 +119,10 @@ function koinstall {
 
 
 export KUBECONFIG=~/.kube/config.${prefixk}
-curl -# -f ${BASE_URL}/${profile}/kubeconfig.gpg | gpg --quiet --decrypt > ${KUBECONFIG}
-echo "export KUBECONFIG=${KUBECONFIG}"
-
+if [[ -z ${nocopy} ]];then
+    curl -# -f ${BASE_URL}/${profile}/kubeconfig.gpg | gpg --quiet --decrypt > ${KUBECONFIG}
+    echo "export KUBECONFIG=${KUBECONFIG}"
+fi
 os4_add_htpasswd_auth
 
 if [[ -n ${koinstall} ]]; then

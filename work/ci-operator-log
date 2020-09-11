@@ -13,17 +13,19 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
-import termcolor
 import argparse
+import datetime
 import json
 import re
 import subprocess
-import datetime
 import sys
 import time
 
+import termcolor
+
 parser = argparse.ArgumentParser()
 parser.add_argument("--last", '-l', action="store_true", default=False)
+parser.add_argument("queries", nargs="*", default="")
 args = parser.parse_args(sys.argv[1:])
 
 shell = subprocess.run("oc whoami --show-server=true".split(" "),
@@ -44,7 +46,7 @@ command = [
     "-l", "prow.k8s.io/refs.repo=tektoncd-pipeline", "-ojson"
 ]
 
-shell = subprocess.run(command, stdout=subprocess.PIPE)
+shell = subprocess.run(command, stdout=subprocess.PIPE, check=True)
 ciruns = json.loads(shell.stdout)
 if not ciruns['items']:
     print("All CI Runs for {targetrepo} has been deleted"
@@ -70,11 +72,16 @@ for run in ciruns['items']:
 if not ret:
     sys.exit(1)
 
+if args.queries:
+    initial_query = " ".join(args.queries)
+else:
+    initial_query = "e2e"
+
 ret.reverse()
 if args.last:
     r = ret[0]
 else:
-    p = subprocess.run(["fzf"],
+    p = subprocess.run(["fzf", "-q", initial_query],
                        stdout=subprocess.PIPE,
                        input="\n".join(ret).encode())
 
@@ -109,6 +116,7 @@ def get_log_container(namespace,
         ret = []
         for line in output.split("\n"):
             _add = True
+            retall.append(line)
             if finish_on and re.match(finish_on, line):
                 follow = False
             for reg, colour in highlights:
@@ -127,6 +135,7 @@ def get_log_container(namespace,
             time.sleep(5)
         else:
             return retall
+    return retall
 
 
 ret = get_log_container(
@@ -134,14 +143,56 @@ ret = get_log_container(
     pod_name,
     "test",
     follow=True,
-    finish_on=
-    ".*(Container setup in.*completed successfully|Reporting job state 'succeeded').*",
+    finish_on=".*(Container (setup|cli) in.*completed successfully).*",
     highlights=[(".*Resolved source https.*", "cyan"),
+                ("ERROR: timeout waiting for pods to come up", "red"),
                 (".*Build.*succeeded after \d+", "magenta"),
                 (".*completed successfully.*", "green"),
                 (".*Creating namespace.*", "yellow")])
+namespace = None
 for line in ret:
-    m = re.match(".*Using namespace (.*)", line)
+    m = re.match(r"ERROR: timeout waiting for pods to come up", line)
     if m:
-        print(m)
-        break
+        print("")
+        cmd = f"oc logs -n ci {pod_name} -c test --follow"
+        print(
+            termcolor.colored(
+                "ERROR while running the test go digg into the log :(",
+                "red",
+                attrs=['bold']) + "\n\t" + cmd)
+
+        sys.exit(1)
+    m = re.match(".*Creating namespace (.*)", line)
+    if m:
+        namespace = m.group(1)
+
+if not namespace:
+    print("Could not find the namespace used")
+    sys.exit(1)
+
+ret = get_log_container(namespace,
+                        "e2e",
+                        "setup",
+                        follow=True,
+                        finish_on=".*Access the OpenShift web-console here:.*",
+                        highlights=[
+                            ("https://.*", "cyan"),
+                            (".*Waiting up to", "magenta"),
+                        ])
+docontinue = False
+for line in ret:
+    m = re.match(".*Access the OpenShift web-console here:.*", line)
+    if m:
+        docontinue = True
+
+if not docontinue:
+    print("Cluster had an issue to spin up it seems?")
+    sys.exit(1)
+
+command = [
+    "oc", "cp", "-c", "artifacts", "-n", namespace,
+    "e2e:/tmp/artifacts/installer/auth/kubeconfig", "/tmp/kubeconfig"
+]
+
+shell = subprocess.run(command, stdout=subprocess.PIPE)
+print(shell.stdout.read())
