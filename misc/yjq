@@ -23,7 +23,7 @@ done
 ARGS=${@}
 [[ -z ${ARGS} ]] && ARGS="."
 
-python3 -c 'import yaml,json,sys;print(json.dumps(yaml.load(sys.stdin), indent=True))'|jq $@ > ${TMP}
+python3 -c 'import yaml,json,sys;print(json.dumps(yaml.safe_load(sys.stdin), indent=True))'|jq $@ > ${TMP}
 
 if [[ -n ${json} ]];then
     jq '.' ${TMP}
