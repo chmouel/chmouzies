@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+set -eux
+
+namespace=
+extra_create_args=
+
+while getopts "fn:" o; do
+    case "${o}" in
+        f)
+            extra_create_args="${extra_create_args} --validate=false";;
+        n)
+            namespace="${OPTARG}";;
+        *)
+            echo "Invalid option"; exit 1;
+            ;;
+    esac
+done
+shift $((OPTIND-1))
+[[ -n ${namespace} ]] && namespace="-n ${namespace}"
+
+args=${@:-}
+farg=${1:-}
+q=""
+[[ -z ${args} || ! -f ${farg} ]] && {
+    [[ -n ${farg} ]] && q="-q ${farg}"
+    args=$(fd -t f '.*\.(y(a?)ml|json)'|fzf ${q})
+}
+
+for file in $args;do
+    kubectl ${namespace} delete -f ${file} 2>/dev/null || true
+    ov=${extra_create_args};grep -q 'Route' ${file} && extra_create_args="--validate=false"
+    kubectl ${namespace} ${extra_create_args} create -f ${file}
+    extra_create_args=${ov}
+done
