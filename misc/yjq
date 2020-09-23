@@ -4,6 +4,11 @@
 # convert it to yaml back (default)
 # output as json if -j
 # output as text if fail to convert it to yaml
+# PROTIP: Use it with zsh global alias ie: alias -g YJQ='-o yaml|yjq'
+#
+# examples:
+#       
+
 set -ue
 local json="" ARGS=""
 
