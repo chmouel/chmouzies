@@ -71,6 +71,7 @@ function recreate() {
 }
 
 function releaseyamlinstall {
+	local yaml
     curl -sILf -o/dev/null -f ${PIPELINE_YAML} && yaml=${PIPELINE_YAML}
 
     [[ -z ${yaml} ]] && {
@@ -80,6 +81,7 @@ function releaseyamlinstall {
             yaml=https://raw.githubusercontent.com/openshift/tektoncd-pipeline/release-${stable_version}/openshift/release/tektoncd-pipeline-${stable_version}.yaml
         }
     }
+	echo ">>> URL: ${yaml}"
     echo ">>> Installing: $(basename ${yaml})"
     recreate ${yaml}
 
