@@ -13,6 +13,6 @@ for source in "$@"; do
     *.md|*.yaml)
         pygmentize -O colorful  "$source";;
     # *) source-highlight --failsafe --infer-lang -f esc --style-file=esc.style -i "$source" ;;
-    *) bat --color=always --style=snip ${source} ;;
+    *)  chroma --formatter="terminal256" --style=vim ${source} ;;
     esac
 done
