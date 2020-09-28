@@ -36,15 +36,16 @@ second=${2:-};[[ -n ${second} ]] && prefixk=${second}
 function operatorinstall() {
 	[[ -n ${reinstall} ]] && oc delete subscription pipelines -n openshift-operators
     cat <<EOF | oc apply -f-
+
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:
-  name: pipelines
+  name: openshift-pipelines-operator
   namespace: openshift-operators
 spec:
-  channel: canary
-  name: openshift-pipelines-operator
-  source: community-operators
+  channel: preview
+  name: openshift-pipelines-operator-rh 
+  source: redhat-operators 
   sourceNamespace: openshift-marketplace
 EOF
 }
@@ -120,6 +121,8 @@ function koinstall {
 }
 
 
+os4_add_htpasswd_auth
+exit
 export KUBECONFIG=~/.kube/config.${prefixk}
 if [[ -z ${nocopy} ]];then
     curl -# -f ${BASE_URL}/${profile}/kubeconfig.gpg | gpg --quiet --decrypt > ${KUBECONFIG}
