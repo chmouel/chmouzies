@@ -10,7 +10,7 @@ for source in "$@"; do
         lesspipe.sh "$source" ;;
     *.json)
         jq -C '.' ${source};;
-    *.md|*.yaml)
+    *.md|*.yaml|*.yml)
         pygmentize -O colorful  "$source";;
     # *) source-highlight --failsafe --infer-lang -f esc --style-file=esc.style -i "$source" ;;
     *)  chroma --formatter="terminal256" --style=vim ${source} ;;
