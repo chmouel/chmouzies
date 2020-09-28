@@ -6,7 +6,7 @@ fshow() {
   fzf --height=30% --ansi --no-sort --reverse --tiebreak=index --bind=ctrl-s:toggle-sort \
       --bind "ctrl-e:execute:
                 (grep -o '[a-f0-9]\{7\}' | head -1 |
-                xargs -I % sh -c 'emacsclient %|less;sleep 10') << 'FZF-EOF'
+                xargs -I % sh -c 'git magit-show %') << 'FZF-EOF'
                 {}
 FZF-EOF" \
       --bind "ctrl-o:execute:
