@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+set -eu
+playlist=http://mafreebox.freebox.fr/freeboxtv/playlist.m3u
+kodi=
+refreshdays=5
+
+m3udockument=$(mktemp /tmp/.mm.XXXXXX)
+clean() { rm -f ${m3udockument}; }
+trap clean EXIT
+
+curl -s -o ${m3udockument}  ${playlist}
+
+[[ $(basename $0) == playk ]] && kodi=yes
+
+while getopts "k" o; do
+    case "${o}" in
+        k)
+            kodi=yes;;
+        *)
+            echo "Invalid option"; exit 1;
+            exit 1;
+            ;;
+    esac
+done
+shift $((OPTIND-1))
+
+fzfargs=
+[[ -n $@ ]] && fzfargs="-q "${@}""
+
+listshows() {
+    sed -n '/^#/ { s/.* - //;p}' ${m3udockument}|grep -v '#EXTM3U'|sort|fzf -1 "${fzfargs:--0}"
+}
+
+grepshow() {
+    sed -n "/^#.* - ${@}/ { n;p; }" ${m3udockument}
+}
+
+playit() {
+    [[ -z ${1} ]] && {
+        echo "Error you need an agument"
+        exit 1
+    }
+    if [[ -n ${kodi} ]];then
+        kodi-play "$@" 2>/dev/null
+    else
+        vlc -f --video-on-top --video-title-show "$@"
+        # mpv --rtsp-transport=udp "$@"
+    fi
+}
+
+chosen="$(listshows)"
+url=$(grepshow "${chosen}")
+
+echo "${chosen} ${url}" # |gsed 's,/\(.*\)/\(.*\)/\(.*\)$,\1/password/\3,'
+playit ${url}
