@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-read -e -p "Branch name: " BRANCH_NAME
+set -eu
+BRANCH_NAME=${1}
+[[ -z ${BRANCH_NAME} ]] && read -e -p "Branch name: " BRANCH_NAME
 git stash &&
     git checkout master &&
-    git fetch origin &&
-    git rebase origin/master &&
+	hub sync &&
     git checkout -b ${BRANCH_NAME} &&
     git stash pop
