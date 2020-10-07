@@ -14,10 +14,16 @@ FZF-EOF" \
                 xargs -I % sh -c 'git browse %') << 'FZF-EOF'
                 {}
 FZF-EOF" \
-      --bind "ctrl-m:execute:
+      --bind "ctrl-a:execute:
                 (grep -o '[a-f0-9]\{7\}' | head -1 |
-                xargs -I % sh -c 'git show --color=always % | less -R') << 'FZF-EOF'
+                xargs -I % sh -c 'echo  %;read') << 'FZF-EOF'
+                {}
+FZF-EOF" \
+      --bind "ctrl-y:execute:
+                (grep -o '[a-f0-9]\{7\}' | head -1 |
+                xargs -I % sh -c 'echo %|pbcopy') << 'FZF-EOF'
                 {}
 FZF-EOF"
 }
-fshow
+
+fshow "$@"
