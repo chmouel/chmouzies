@@ -121,8 +121,6 @@ function koinstall {
 }
 
 
-os4_add_htpasswd_auth
-exit
 export KUBECONFIG=~/.kube/config.${prefixk}
 if [[ -z ${nocopy} ]];then
     curl -# -f ${BASE_URL}/${profile}/kubeconfig.gpg | gpg --quiet --decrypt > ${KUBECONFIG}
