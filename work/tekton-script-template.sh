@@ -7,15 +7,13 @@ TMP=$(mktemp /tmp/.mm.XXXXXX)
 clean() { rm -f "${TMP}"; }
 trap clean EXIT
 
-cat "${fname}" > ${TMP}
+cat "${fname}" > "${TMP}"
 
 cd "$(dirname "$(readlink -f "${fname}")")"
 
-
 IFS="
 "
-
-for line in $(grep "## INSERT" "$(basename "${fname}")");do
+grep "## INSERT" "$(basename "${fname}")"|while read -r line;do
     F2=$(<"${TMP}")
 
     scriptfile=${line//## INSERT /}
