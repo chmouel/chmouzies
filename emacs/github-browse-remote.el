@@ -53,7 +53,7 @@ By default is true."
   :group 'github-browse-remote)
 
 
-(defun github-browse-remote--call (path &optional linestart lineend)
+(defun github-browse-remote--call (path &optional master linestart lineend)
   (let ((start-line
          (when linestart
            (number-to-string (line-number-at-pos linestart))))
@@ -70,17 +70,18 @@ By default is true."
      (shell-command-to-string
       (concat
        github-browse-remote-executable
+       (if master (concat " -m "))
        " -n " path
        (if start-line (concat " " start-line))
        (if end-line (concat " " end-line)))))))
 
-(defun github-browse-remote-get-url ()
+(defun github-browse-remote-get-url (&optional master)
   "Main method, returns URL to browse."
 
   (cond
    ;; dired-mode
    ((eq major-mode 'dired-mode)
-    (github-browse-remote--call (dired-current-directory)))
+    (github-browse-remote--call (dired-current-directory) master))
 
    ;; magit-status-mode
    ((eq major-mode 'magit-status-mode)
@@ -94,7 +95,8 @@ By default is true."
          (widen)
          (goto-char (line-beginning-position))
          (search-forward " ")
-         (buffer-substring-no-properties (line-beginning-position) (- (point) 1))))))
+         (buffer-substring-no-properties (line-beginning-position) (- (point) 1))))
+     master))
 
    ;; magit-commit-mode and magit-revision-mode
    ((or (eq major-mode 'magit-commit-mode) (eq major-mode 'magit-revision-mode))
@@ -106,24 +108,24 @@ By default is true."
              (commithash (cl-loop for word in (s-split " " first-line)
                                   when (eq 40 (length word))
                                   return word)))
-        (github-browse-remote--call commithash))))
+        (github-browse-remote--call commithash master))))
 
    ;; log-view-mode
    ((derived-mode-p 'log-view-mode)
-    (github-browse-remote--call (cadr (log-view-current-entry))))
+    (github-browse-remote--call (cadr (log-view-current-entry)) master))
 
    ;; We're inside of file-attached buffer with active region
    ((and buffer-file-name (use-region-p))
     (let ((point-begin (min (region-beginning) (region-end)))
           (point-end (max (region-beginning) (region-end))))
       (github-browse-remote--call
-       buffer-file-name point-begin
+       buffer-file-name master point-begin
        (if (eq (char-before point-end) ?\n) (- point-end 1) point-end))))
 
    ;; We're inside of file-attached buffer without region
    (buffer-file-name
     (let ((line (when github-browse-remote-add-line-number-if-no-region-selected (point))))
-      (github-browse-remote--call (buffer-file-name) line)))
+      (github-browse-remote--call (buffer-file-name) master line)))
 
    (t (error "Sorry, I'm not sure what to do with this."))))
 
@@ -131,7 +133,9 @@ By default is true."
 (defun github-browse-remote ()
   "Browse the current file with `browse-url'."
   (interactive)
-  (browse-url (github-browse-remote-get-url)))
+  (browse-url
+   (github-browse-remote-get-url
+    (when (consp current-prefix-arg) t))))
 
 ;;;###autoload
 (defun github-browse-remote-kill ()
@@ -140,7 +144,9 @@ By default is true."
 Works like `github-browse-remote', but puts the address in the
 kill ring instead of opening it with `browse-url'."
   (interactive)
-  (kill-new (github-browse-remote-get-url)))
+  (kill-new
+   (github-browse-remote-get-url
+    (when (consp current-prefix-arg) t))))
 
 (provide 'github-browse-remote)
 
