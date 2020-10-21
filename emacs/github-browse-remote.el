@@ -54,15 +54,17 @@ By default is true."
 
 
 (defun github-browse-remote--call (path &optional linestart lineend)
-  (let (
-        (start-line
+  (let ((start-line
          (when linestart
            (number-to-string (line-number-at-pos linestart))))
         (end-line
          (when lineend
            (number-to-string (line-number-at-pos lineend))))
-        (default-directory (file-name-directory path)))
-    (if linestart "hello")
+        (default-directory
+          (if (file-exists-p path)
+              (file-name-directory path)
+            default-directory
+            )))
     (replace-regexp-in-string
      "\n$" ""
      (shell-command-to-string
