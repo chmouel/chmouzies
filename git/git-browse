@@ -1,37 +1,47 @@
 #!/usr/bin/env bash
 function readlinkf() {
-    python -c 'import os,sys;print(os.path.realpath(sys.argv[1]))' $1
+    python -c 'import os,sys;print(os.path.realpath(sys.argv[1]))' "$1"
 }
-
 
 BROWSER=true
 SHA=
-if [[ $1 == "-m" ]];then
-    SHA=master
-    shift
+
+while getopts "mnu:" o; do
+    case "${o}" in
+        m) SHA=master;;
+        n) BROWSER=;;
+        u) UPSTREAM_NAME=${OPTARG};;
+        *) echo "-m=use master, -n=no browser"; exit 1;;
+    esac
+done
+shift $((OPTIND-1))
+
+if [[ -z ${UPSTREAM_NAME} ]];then
+    if git remote show upstream 2>/dev/null >/dev/null;then
+        UPSTREAM_NAME=upstream
+    elif git config forge.remote 2>/dev/null >/dev/null;then
+        UPSTREAM_NAME=$(git config forge.remote)
+    else
+        UPSTREAM_NAME=origin
+    fi
 fi
 
-if [[ $1 == "-u" ]];then
-    BROWSER=
-    shift
-fi
-
-UPSTREAM_NAME=$(git config forge.remote 2>/dev/null || echo origin)
 ORIGIN_REMOTE=$(git config remote.${UPSTREAM_NAME}.url)
-[[ -z ${ORIGIN_REMOTE} ]] && ORIGIN_REMOTE=$(git config remote.upstream.url)
-[[ -z ${ORIGIN_REMOTE} ]] && { echo "Could not detect your origin remote" ; exit 1;}
+[[ -z ${ORIGIN_REMOTE} ]] && {
+    echo "Could not detect your origin remote" ;
+    exit 1
+}
 ORIGIN_REMOTE=${ORIGIN_REMOTE/.git/}
-set -e
 
 if [[ ${ORIGIN_REMOTE} =~ git@gisthub.com:([0-9]+) ]];then
     url=https://gist.github.com/${BASH_REMATCH[1]}
-    echo $url
-    type -p open >/dev/null 2>/dev/null && open $url
+    echo "$url"
+    type -p open >/dev/null 2>/dev/null && open "$url"
     exit
 fi
 
-
 if [[ ${ORIGIN_REMOTE} != git@github.com* && ${ORIGIN_REMOTE} != http*github.com* ]];then
+    echo "We only support GitHUBs"
     exit
 fi
 
