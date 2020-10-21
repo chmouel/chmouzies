@@ -34,7 +34,7 @@
 (require 'vc-git)
 
 (defgroup github-browse-remote nil
-  "Open target on github/gitlab/bitbucket/stash/etc."
+  "Open target on github using the git-browse script"
   :prefix "github-browse-remote-"
   :group 'applications)
 
