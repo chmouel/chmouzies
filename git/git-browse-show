@@ -1,29 +1,26 @@
 #!/usr/bin/env bash
 #from https://gist.github.com/junegunn/f4fca918e937e6bf5bad
 fshow() {
-  git log --graph --color=always \
-      --format="%C(auto)%h%d %s %C(black)%C(bold)%cr" "$@" |
-  fzf --height=30% --ansi --no-sort --reverse --tiebreak=index --bind=ctrl-s:toggle-sort \
-      --bind "ctrl-e:execute:
-                (grep -o '[a-f0-9]\{7\}' | head -1 |
-                xargs -I % sh -c 'git magit-show %') << 'FZF-EOF'
-                {}
-FZF-EOF" \
-      --bind "ctrl-o:execute:
-                (grep -o '[a-f0-9]\{7\}' | head -1 |
-                xargs -I % sh -c 'git browse %') << 'FZF-EOF'
-                {}
-FZF-EOF" \
-      --bind "ctrl-a:execute:
-                (grep -o '[a-f0-9]\{7\}' | head -1 |
-                xargs -I % sh -c 'echo  %;read') << 'FZF-EOF'
-                {}
-FZF-EOF" \
-      --bind "ctrl-y:execute:
-                (grep -o '[a-f0-9]\{7\}' | head -1 |
-                xargs -I % sh -c 'echo %|pbcopy') << 'FZF-EOF'
-                {}
-FZF-EOF"
+       COMMIT=$(git log --graph --color=always \
+           --format="%C(auto)%h%d %s %C(black)%C(bold)%cr" "$@" |
+       fzf --ansi -m --no-sort --reverse --tiebreak=index --bind=ctrl-s:toggle-sort \
+           --preview="git show \$(echo {}|grep -o '[a-f0-9]\{7\}' | head -1)|bat --color=always -l=Diff" \
+           --bind "bspace:preview-page-up" \
+           --bind "space:preview-page-down" \
+           --bind "ctrl-o:execute:
+                     (grep -o '[a-f0-9]\{7\}' | head -1 |
+                     xargs -I % sh -c 'git browse %') << 'FZF-EOF'
+                     {}
+     FZF-EOF" \
+           --bind "ctrl-y:execute:
+                     (grep -o '[a-f0-9]\{7\}' | head -1 |
+                     xargs -I % sh -c 'echo %|pbcopy') << 'FZF-EOF'
+                     {}
+     FZF-EOF"
+             )
+       for i in ${COMMIT};do
+           echo "${i}"|grep -o '[a-f0-9]\{7\}' | head -1
+       done
 }
 
 fshow "$@"
