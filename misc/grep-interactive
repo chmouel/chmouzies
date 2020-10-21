@@ -6,12 +6,12 @@ MODE=fzf
 	MODE=
 }
 
-[[ $funcstack[1] == "ge" || "$(basename $0)" == "ge" ]] && {
+[[ ${GREP_INTERACTIVE_EDITOR} == emacs || $funcstack[1] == "ge" || "$(basename $0)" == "ge" ]] && {
 	MODE=fzf
     editwith=emacs
 }
 
-[[ $funcstack[1] == "gv" || "$(basename $0)" == "gv" ]] && {
+[[ ${GREP_INTERACTIVE_EDITOR} == vim || $funcstack[1] == "gv" || "$(basename $0)" == "gv" ]] && {
 	MODE=fzf
     editwith=vim
 }
@@ -38,6 +38,8 @@ fi
 output=$(${=CMD} ${@} | fzf --delimiter : \
 	  -0 \
       --preview 'bat --style=numbers --color=always --highlight-line {2} {1}' \
+      --bind "bspace:preview-page-up" \
+      --bind "space:preview-page-down" \
 	  --layout reverse \
       --preview-window 70%:bottom:+{2}-/2)
 [[ -z ${output} ]] && return
