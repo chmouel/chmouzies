@@ -1,6 +1,6 @@
 ;;; github-browse-remote.el --- Open github/gitlab from Emacs -*- lexical-binding:t -*-
 
-;; Copyright © 2015-2020
+;; Copyright © 2020
 ;;
 ;; Author:     Chmouel Boudjnah
 ;; Version:    0.1.0
