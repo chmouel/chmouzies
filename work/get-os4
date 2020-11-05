@@ -10,9 +10,11 @@ koinstall=
 reinstall=
 nocopy=
 
+# PIPELINE_YAML=https://storage.googleapis.com/tekton-releases/pipeline/latest/release.yaml
 # PIPELINE_YAML=https://uploader-ci-openshift-pipelines.apps.devint.openshiftknativedemo.org/release/pipeline/pipeline-nightly.yaml
 PIPELINE_YAML=https://raw.githubusercontent.com/openshift/tektoncd-pipeline/release-next/openshift/release/tektoncd-pipeline-nightly.yaml
 
+# TRIGGER_YAML=https://storage.googleapis.com/tekton-releases/triggers/latest/release.yaml
 # TRIGGER_YAML=https://uploader-ci-openshift-pipelines.apps.devint.openshiftknativedemo.org/release/pipeline/triggers-nightly.yaml
 TRIGGER_YAML=https://raw.githubusercontent.com/openshift/tektoncd-triggers/release-next/openshift/release/tektoncd-triggers-nightly.yaml
 BASE_URL=https://uploader-cron.svc.ci.openshift.org/
