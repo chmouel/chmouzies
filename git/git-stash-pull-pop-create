@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -eu
-BRANCH_NAME=${1}
+BRANCH_NAME=${1:-""}
 [[ -z ${BRANCH_NAME} ]] && read -e -p "Branch name: " BRANCH_NAME
 git stash &&
     git checkout master &&
