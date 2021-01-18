@@ -82,6 +82,9 @@ fi
 
 echo ${URL}
 
-if [[ -n ${BROWSER} && -x /usr/bin/open ]];then
-    /usr/bin/open ${URL}
+type -p xdg-open &>/dev/null && OPEN_CMD=xdg-open
+type -p open &>/dev/null && OPEN_CMD=open
+
+if [[ -n ${BROWSER} && -n ${OPEN_CMD} ]];then
+    ${OPEN_CMD} ${URL}
 fi
