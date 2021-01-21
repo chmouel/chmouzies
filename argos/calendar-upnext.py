@@ -27,6 +27,9 @@ import apiclient
 RESTRICT_TO_CALENDAR = ["Work"]
 MY_EMAIL = "cboudjna@redhat.com"
 MAX_LENGTH = 50
+EVENT_ORGANIZERS_ICON = {
+    "Tekton": "🐱",
+}
 
 
 def htmlspecialchars(text):
@@ -95,7 +98,7 @@ def first_event(event):
         if dttype[1] > 1:
             humzrd += "s"
         humzrd += " "
-    if end_time >= now:
+    if now > event['start']['dateTime']:
         humzrd = humzrd.strip() + " left"
     return f"{humzrd.strip()} - {summary}"
 
@@ -110,12 +113,18 @@ def show(events):
     ret.append("---")
     ret.append("Chmou Next Meeting|size=14")
     ret.append("")
-    ret.append("January 21, 2021|color='#E67C73'")
-    count = 1
+    ret.append("Refresh | refresh=true")
+    ret.append("\n")
+    ret.append(f"{now.strftime('%d %B %Y')}|color='#E67C73'")
 
     for event in events:
         summary = htmlspecialchars(event['summary'].strip())
 
+        organizer = event['organizer']['displayName']
+        if organizer in EVENT_ORGANIZERS_ICON.keys():
+            icon = EVENT_ORGANIZERS_ICON[organizer]
+        else:
+            icon = "-"
         start_time = event['start']['dateTime']
         start_time_str = start_time.strftime("%H:%M")
         if now >= start_time:
@@ -127,8 +136,8 @@ def show(events):
             href = f"href={event['location']}"
         elif 'hangoutLink' in event:
             href = f"href={event['hangoutLink']}"
-        ret.append(f"{count}) {summary} - {start_time_str} | {href}")
-        count += 1
+        ret.append(f"{icon} {summary} - {start_time_str} | {href}")
+
     return ret
 
 
