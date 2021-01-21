@@ -127,6 +127,7 @@ def first_event(event):
 
 def show(events):
     """Show all events in menuitems"""
+    currentday = ""
     now = datetime.datetime.now(dttz.tzlocal()).astimezone(
         tzlocal.get_localzone())
     if len(events) == 0:
@@ -138,13 +139,15 @@ def show(events):
     ret.append("")
     ret.append("Refresh | refresh=true")
     ret.append("\n")
-    ret.append(
-        f"{events[0]['start']['dateTime'].strftime('%d %B %Y')}|color='#E67C73'"
-    )
-    ret.append("---")
-    ret.append("\n")
 
     for event in events:
+        _cday = events[0]['start']['dateTime'].strftime('%A %d %B %Y')
+        if _cday != currentday:
+            ret.append(f"{_cday}|color='#E67C73'")
+            ret.append("---")
+            ret.append("\n")
+            currentday = _cday
+
         summary = htmlspecialchars(event['summary'].strip())
 
         organizer = event['organizer'].get('displayName',
