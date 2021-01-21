@@ -22,6 +22,7 @@ import datetime
 import os.path
 import re
 import subprocess
+import sys
 
 import apiclient
 import dateutil.parser as dtparse
@@ -40,10 +41,12 @@ EVENT_ORGANIZERS_ICON = {
     r"(pbhattac|nkakkar|rbehera|vdemeest|kbaig|pchandra|ssadeghi|hshinde|nikthoma|pthangad|yhontyk|varadhya|pgarg|pradkuma|sashture|sthaha|gmontero|ppitonak)@redhat.com":
     "👷"
 }
+
 # We assume that you use pass to store your secret in gpg
 PASS_CREDENTIALS_ID = "google-calendar-api-token"
 CREDENTIAL_PATH = os.path.expanduser(
     "~/.credentials/calendar-python-quickstart.json")
+SKIP_NON_ACCEEPTED = True
 
 
 def htmlspecialchars(text):
@@ -85,8 +88,13 @@ def filter_relevent_events(events):
         if now >= end_time:
             continue
 
+        if 'attendees' not in event:
+            continue
+
         # Get only accepted events
-        skip_event = True
+        skip_event = False
+        if SKIP_NON_ACCEEPTED:
+            skip_event = True
         for attendee in event['attendees']:
             if attendee['email'] == MY_EMAIL and attendee[
                     'responseStatus'] == "accepted":
@@ -133,7 +141,9 @@ def show(events):
     if len(events) == 0:
         return []
 
-    ret = [f":date: <span>{first_event(events[0])}</span>"]
+    ret = [
+        f" <span>{first_event(events[0])}</span>| imageWidth=20 iconName=x-office-calendar"
+    ]
     ret.append("---")
     ret.append("Chmou Next Meeting|size=14")
     ret.append("")
@@ -216,7 +226,9 @@ if __name__ == '__main__':
                                             http=http_authorization)
 
     all_events = get_all_events(api_service)
-    print("\n".join(show(all_events)))
     os.remove(CREDENTIAL_PATH)
+    if not all_events:
+        sys.exit(0)
+    print("\n".join(show(all_events)))
 
 # p(next_event['summary'])
