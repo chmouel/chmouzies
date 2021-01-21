@@ -124,7 +124,7 @@ def show(events):
         if organizer in EVENT_ORGANIZERS_ICON.keys():
             icon = EVENT_ORGANIZERS_ICON[organizer]
         else:
-            icon = "-"
+            icon = "•"
         start_time = event['start']['dateTime']
         start_time_str = start_time.strftime("%H:%M")
         if now >= start_time:
