@@ -52,12 +52,14 @@ def filter_relevent_events(events):
     for event in events:
         if 'date' in event['start']:
             continue
-        event_time = dtparse.parse(event['start']['dateTime']).astimezone(
+        start_time = dtparse.parse(event['start']['dateTime']).astimezone(
+            tzlocal.get_localzone())
+        end_time = dtparse.parse(event['end']['dateTime']).astimezone(
             tzlocal.get_localzone())
         now = datetime.datetime.now(dttz.tzlocal()).astimezone(
             tzlocal.get_localzone())
 
-        if now > event_time:
+        if now >= end_time:
             continue
 
         # Get only accepted events
@@ -68,7 +70,7 @@ def filter_relevent_events(events):
                 skip_event = False
         if skip_event:
             continue
-        event['start']['dateTime'] = event_time
+        event['start']['dateTime'] = start_time
         ret.append(event)
     return ret
 
@@ -77,8 +79,13 @@ def first_event(event):
     summary = htmlspecialchars(event['summary'].strip()[:20])
     now = datetime.datetime.now(dttz.tzlocal()).astimezone(
         tzlocal.get_localzone())
+    end_time = dtparse.parse(event['end']['dateTime']).astimezone(
+        tzlocal.get_localzone())
 
-    _rd = dtrelative.relativedelta(event['start']['dateTime'], now)
+    if end_time >= now:
+        _rd = dtrelative.relativedelta(end_time, now)
+    else:
+        _rd = dtrelative.relativedelta(event['start']['dateTime'], now)
     humzrd = ""
     for dttype in (("day", _rd.days), ("hour", _rd.hours), ("minute",
                                                             _rd.minutes)):
@@ -88,10 +95,14 @@ def first_event(event):
         if dttype[1] > 1:
             humzrd += "s"
         humzrd += " "
+    if end_time >= now:
+        humzrd = humzrd.strip() + " left"
     return f"{humzrd.strip()} - {summary}"
 
 
 def show(events):
+    now = datetime.datetime.now(dttz.tzlocal()).astimezone(
+        tzlocal.get_localzone())
     if len(events) == 0:
         return
 
@@ -104,7 +115,11 @@ def show(events):
 
     for event in events:
         summary = htmlspecialchars(event['summary'].strip())
-        timestr = event['start']['dateTime'].strftime("%H:%M")
+
+        start_time = event['start']['dateTime']
+        start_time_str = start_time.strftime("%H:%M")
+        if now >= start_time:
+            summary = f"<span color='blue'>{summary}</span>"
 
         href = ""
 
@@ -112,7 +127,7 @@ def show(events):
             href = f"href={event['location']}"
         elif 'hangoutLink' in event:
             href = f"href={event['hangoutLink']}"
-        ret.append(f"{count}) {summary} - {timestr} | {href}")
+        ret.append(f"{count}) {summary} - {start_time_str} | {href}")
         count += 1
     return ret
 
