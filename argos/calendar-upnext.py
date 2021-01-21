@@ -13,23 +13,37 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
+"""
+Show next google calendar events in bitbar/argos
+
+Inspired from another script and completely rewritten it.
+"""
 import datetime
 import os.path
+import re
+import subprocess
 
+import apiclient
 import dateutil.parser as dtparse
 import dateutil.relativedelta as dtrelative
 import dateutil.tz as dttz
 import httplib2
 import tzlocal
 from oauth2client.file import Storage
-import apiclient
 
 RESTRICT_TO_CALENDAR = ["Work"]
 MY_EMAIL = "cboudjna@redhat.com"
 MAX_LENGTH = 50
 EVENT_ORGANIZERS_ICON = {
-    "Tekton": "🐱",
+    "^Tekton$":
+    "🐱",
+    r"(pbhattac|nkakkar|rbehera|vdemeest|kbaig|pchandra|ssadeghi|hshinde|nikthoma|pthangad|yhontyk|varadhya|pgarg|pradkuma|sashture|sthaha|gmontero|ppitonak)@redhat.com":
+    "👷"
 }
+# We assume that you use pass to store your secret in gpg
+PASS_CREDENTIALS_ID = "google-calendar-api-token"
+CREDENTIAL_PATH = os.path.expanduser(
+    "~/.credentials/calendar-python-quickstart.json")
 
 
 def htmlspecialchars(text):
@@ -41,11 +55,17 @@ def htmlspecialchars(text):
 def get_credentials():
     """Gets valid user credentials from storage.
     """
-    credential_path = os.path.expanduser(
-        "~/.credentials/calendar-python-quickstart.json")
-    if not os.path.exists(credential_path):
-        raise Exception("No credentials path")
-    store = Storage(credential_path)
+    ret = subprocess.run(f"pass show {PASS_CREDENTIALS_ID}",
+                         shell=True,
+                         check=True,
+                         capture_output=True)
+    if ret.returncode != 0:
+        raise Exception(
+            f"cmd: pass show {PASS_CREDENTIALS_ID} has failed :\\ ")
+    # Stupid lib excpecting file
+    with open(CREDENTIAL_PATH, 'w') as filepath:
+        filepath.write(ret.stdout.decode())
+    store = Storage(CREDENTIAL_PATH)
     return store.get()
 
 
@@ -79,16 +99,18 @@ def filter_relevent_events(events):
 
 
 def first_event(event):
+    """Show first even in toolbar"""
     summary = htmlspecialchars(event['summary'].strip()[:20])
     now = datetime.datetime.now(dttz.tzlocal()).astimezone(
         tzlocal.get_localzone())
     end_time = dtparse.parse(event['end']['dateTime']).astimezone(
         tzlocal.get_localzone())
+    start_time = event['start']['dateTime']
 
-    if end_time >= now:
+    if now > start_time:
         _rd = dtrelative.relativedelta(end_time, now)
     else:
-        _rd = dtrelative.relativedelta(event['start']['dateTime'], now)
+        _rd = dtrelative.relativedelta(start_time, now)
     humzrd = ""
     for dttype in (("day", _rd.days), ("hour", _rd.hours), ("minute",
                                                             _rd.minutes)):
@@ -98,16 +120,17 @@ def first_event(event):
         if dttype[1] > 1:
             humzrd += "s"
         humzrd += " "
-    if now > event['start']['dateTime']:
+    if now > start_time:
         humzrd = humzrd.strip() + " left"
     return f"{humzrd.strip()} - {summary}"
 
 
 def show(events):
+    """Show all events in menuitems"""
     now = datetime.datetime.now(dttz.tzlocal()).astimezone(
         tzlocal.get_localzone())
     if len(events) == 0:
-        return
+        return []
 
     ret = [f":date: <span>{first_event(events[0])}</span>"]
     ret.append("---")
@@ -115,16 +138,24 @@ def show(events):
     ret.append("")
     ret.append("Refresh | refresh=true")
     ret.append("\n")
-    ret.append(f"{now.strftime('%d %B %Y')}|color='#E67C73'")
+    ret.append(
+        f"{events[0]['start']['dateTime'].strftime('%d %B %Y')}|color='#E67C73'"
+    )
+    ret.append("---")
+    ret.append("\n")
 
     for event in events:
         summary = htmlspecialchars(event['summary'].strip())
 
-        organizer = event['organizer']['displayName']
-        if organizer in EVENT_ORGANIZERS_ICON.keys():
-            icon = EVENT_ORGANIZERS_ICON[organizer]
-        else:
-            icon = "•"
+        organizer = event['organizer'].get('displayName',
+                                           event['organizer'].get('email'))
+
+        icon = "•"
+        for regexp in EVENT_ORGANIZERS_ICON:
+            if re.match(regexp, organizer):
+                icon = EVENT_ORGANIZERS_ICON[regexp]
+                break
+
         start_time = event['start']['dateTime']
         start_time_str = start_time.strftime("%H:%M")
         if now >= start_time:
@@ -142,6 +173,7 @@ def show(events):
 
 
 def get_all_events(service):
+    """Get all events from Google Calendar API"""
     page_token = None
     calendar_ids = []
     event_list = []
@@ -149,7 +181,8 @@ def get_all_events(service):
         calendar_list = service.calendarList().list(
             pageToken=page_token).execute()
         for calendar_list_entry in calendar_list['items']:
-            if calendar_list_entry['summary'] not in RESTRICT_TO_CALENDAR:
+            if RESTRICT_TO_CALENDAR and calendar_list_entry[
+                    'summary'] not in RESTRICT_TO_CALENDAR:
                 continue
             calendar_ids.append(calendar_list_entry['id'])
         page_token = calendar_list.get('nextPageToken')
@@ -175,11 +208,12 @@ def get_all_events(service):
 if __name__ == '__main__':
     credentials = get_credentials()
     http_authorization = credentials.authorize(httplib2.Http())
-    service = apiclient.discovery.build('calendar',
-                                        'v3',
-                                        http=http_authorization)
+    api_service = apiclient.discovery.build('calendar',
+                                            'v3',
+                                            http=http_authorization)
 
-    all_events = get_all_events(service)
+    all_events = get_all_events(api_service)
     print("\n".join(show(all_events)))
-    print("---")
+    os.remove(CREDENTIAL_PATH)
+
 # p(next_event['summary'])
