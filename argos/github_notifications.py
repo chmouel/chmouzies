@@ -238,7 +238,7 @@ class GithubNotifications():
         notifications = json.load(Tools.github_request(GITHUB_URL + "/notifications"))
 
         if notifications:
-            Tools.print_bitbar_line(title='🔵', color=self.color_active)
+            Tools.print_bitbar_line(title='💡', color=self.color_active)
             print('---')
         else:
             print('⦿')
