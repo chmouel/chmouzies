@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+[[ $(uname -s) == "Linux" ]] && b=linux
+[[ $(uname -s) == "Darwin" ]] && b=macosx
+
+[[ -z ${b} ]] && { exit 1 ;}
+
+set -ve
+curl -fsL -o- https://mirror.openshift.com/pub/openshift-v4/clients/oc/latest/${b}/oc.tar.gz|sudo tar xvzf - -C /usr/local/bin oc kubectl
