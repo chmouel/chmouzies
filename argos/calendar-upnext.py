@@ -128,6 +128,7 @@ def first_event(event):
         if dttype[1] > 1:
             humzrd += "s"
         humzrd += " "
+
     if now > start_time:
         humzrd = humzrd.strip() + " left"
     return f"{humzrd.strip()} - {summary}"
@@ -147,9 +148,14 @@ def show(events):
     ret.append("---")
     ret.append("Chmou Next Meeting|size=14")
     ret.append("")
-    ret.append("Refresh | refresh=true")
+    event_first = events[0]
+    if now >= event_first['start']['dateTime']:
+        if 'attachments' in event_first:
+            ret.append(
+                f"📑 Open current meeting document | href={event_first['attachments'][0]['fileUrl']}"
+            )
     ret.append("\n")
-
+    ret.append("---")
     for event in events:
         _cday = events[0]['start']['dateTime'].strftime('%A %d %B %Y')
         if _cday != currentday:
@@ -163,7 +169,7 @@ def show(events):
         organizer = event['organizer'].get('displayName',
                                            event['organizer'].get('email'))
 
-        icon = "•"
+        icon = "💆"
         for regexp in EVENT_ORGANIZERS_ICON:
             if re.match(regexp, organizer):
                 icon = EVENT_ORGANIZERS_ICON[regexp]
@@ -173,7 +179,6 @@ def show(events):
         start_time_str = start_time.strftime("%H:%M")
         if now >= start_time:
             summary = f"<span color='blue'>{summary}</span>"
-
         href = ""
 
         if 'location' in event and event['location'].startswith("https://"):
@@ -230,5 +235,6 @@ if __name__ == '__main__':
     if not all_events:
         sys.exit(0)
     print("\n".join(show(all_events)))
+    print("\n--\nRefresh | refresh=true")
 
 # p(next_event['summary'])
