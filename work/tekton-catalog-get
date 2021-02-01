@@ -1,0 +1,27 @@
+#!/bin/bash
+
+CATALOG=$(readlink -f $GOPATH/src/github.com/tektoncd/catalog)
+
+ALL_TASKS=$@
+if [[ -z "${ALL_TASKS}" ]];then
+	ALL_TASKS=$(echo ${CATALOG}/task/*/[0-9].[0-9]|tr ' ' '\n'|sed -e "s,${CATALOG}/task/,,"|fzf -m -1 -0)
+fi
+
+install_tasks=""
+for i in ${ALL_TASKS};do
+	[[ ${i} =~ ([^/]*)/(.*) ]] && { 
+		[[ -d ${CATALOG}/task/${BASH_REMATCH[1]}/${BASH_REMATCH[2]} ]] || { echo "Could not find ${i}"; exit 1 ;}
+		install_tasks="$install_tasks ${CATALOG}/task/${BASH_REMATCH[1]}/${BASH_REMATCH[2]}/${BASH_REMATCH[1]}.yaml"; 
+		continue 
+	}
+	_all_version=( $( echo $CATALOG/task/$i/[0-9].[0-9]/${i}.yaml ))
+	lasttask=${_all_version[*]:(-1)}
+	[[ -f ${lasttask} ]] || { echo "Could not find ${i}"; exit 1 ;}
+	install_tasks="$install_tasks ${lasttask}"
+done
+
+for i in  ${install_tasks};do
+	echo "${i}"
+done
+
+#for i in git-clone yaml-lint pylint black shellcheck mypy-lint;do latest=(; echo "${latest[-1]}";done
