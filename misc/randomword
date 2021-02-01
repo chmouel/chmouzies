@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+local total randomn
+total=$(wc -l /usr/share/dict/words|cut -d " " -f3)
+randomn=$(jot -r 1 1 ${total})
+sed "${randomn}q;d" /usr/share/dict/words |  awk '{print tolower($0)}'
