@@ -111,9 +111,7 @@ def detect_filetype(text):
     ret = ret.split(";")[0]
     if ret == "text/plain":
         ret = runcmd(
-            "sed -n '/python-code/d;/^#/d;/^$/d;s/[ \t].*$//;p' /etc/mime.types |rofi -dmenu -mesg \"Select a mimetype for %s\"" % (
-                text.split("\n")[0]
-            )
+            "sed -n '/python-code/d;/^#/d;/^$/d;s/[ \t].*$//;p' /etc/mime.types |rofi -dmenu -select text/plain"
         )
     os.remove(magicfile)
     os.remove(contentfile)
@@ -124,7 +122,8 @@ def pasteit(text=None):
     if not text:
         text = runcmd("xsel")
     filetype = detect_filetype(text).strip()
-    extension = mimetypes.guess_extension(filetype) or "txt"
+    extension = mimetypes.guess_extension(filetype) or ".txt"
+
     r = requests.post("https://api.paste.gg/v1/pastes",
                       headers={"Content-Type": "application/json"},
                       json={
@@ -137,7 +136,7 @@ def pasteit(text=None):
                            datetime.timedelta(hours=EXPIRATION_HOURS)
                            ).strftime("%Y-%m-%dT%H:%M:%SZ"),
                           "files": [{
-                              "name": f"paste.{extension}",
+                              "name": f"paste{extension}",
                               "content": {
                                   "format": "text",
                                   "value": text.encode()
@@ -149,7 +148,7 @@ def pasteit(text=None):
     if output['status'] != 'success':
         return ""
     url = "https://paste.gg/p/anonymous/" + output['result']['id']
-    if extension == 'txt':
+    if extension == '.txt':
         url += f"/files/{output['result']['files'][0]['id']}/raw"
     return url
 
