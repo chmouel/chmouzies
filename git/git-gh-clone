@@ -50,7 +50,8 @@ if [[ -n ${fork} && ${org} != chmouel ]]; then
  else
     git remote set-url origin $(git remote get-url origin|sed 's,https://github.com/,git@github.com:,')
 fi
+set -x
 type -p pbcopy && c=pbcopy
-type -p xclip && c=clip
+type -p xclip && c="xclip -sel clip"
 
 [[ -n ${c} ]] && echo ${bdir}/${repo}|${c}
