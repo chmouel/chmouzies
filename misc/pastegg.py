@@ -9,8 +9,10 @@ It will open a webbrowser at the end (or print it on stdout) the resulted
 url.
 """
 import datetime
+import json
 import mimetypes
 import os
+import pathlib
 import subprocess
 import sys
 import tempfile
@@ -19,7 +21,6 @@ import webbrowser
 import requests
 
 EXPIRATION_HOURS = 24
-
 
 RAW_PROGRAMMING_MAGIC = r"""
 0       string             =<?php         PHP text
@@ -97,17 +98,13 @@ def detect_filetype(text):
     magicfile = tempfile.NamedTemporaryFile(delete=False).name
     open(contentfile, 'w').write(text)
     open(magicfile, 'w').write(RAW_PROGRAMMING_MAGIC)
-    ret = runcmd(
-        f"file -m/usr/share/file/magic:{magicfile} -b {contentfile}"
-    )
+    ret = runcmd(f"file -m/usr/share/file/magic:{magicfile} -b {contentfile}")
     for ft in MAP_FILETYPE_STRING_TO_FILENAME:
         if ft in ret:
             os.remove(magicfile)
             os.remove(contentfile)
             return MAP_FILETYPE_STRING_TO_FILENAME[ft]
-    ret = runcmd(
-        f"file -ib {contentfile}"
-    )
+    ret = runcmd(f"file -ib {contentfile}")
     ret = ret.split(";")[0]
     if ret == "text/plain":
         ret = runcmd(
@@ -150,6 +147,16 @@ def pasteit(text=None):
     url = "https://paste.gg/p/anonymous/" + output['result']['id']
     if extension == '.txt':
         url += f"/files/{output['result']['files'][0]['id']}/raw"
+
+    resultpath = pathlib.Path("~/.cache/pastegg/results.json").expanduser()
+    if not resultpath.parent.exists():
+        resultpath.parent.mkdir(0o755)
+    if resultpath.exists():
+        jeez = json.load(resultpath.open()) or []
+    else:
+        jeez = []
+    jeez.append(output)
+    resultpath.write_text(json.dumps(jeez))
     return url
 
 
