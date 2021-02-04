@@ -119,7 +119,10 @@ def pasteit(text=None):
     if not text:
         text = runcmd("xsel")
     filetype = detect_filetype(text).strip()
-    extension = mimetypes.guess_extension(filetype) or ".txt"
+    if filetype.startswith("."):
+        extension = filetype
+    else:
+        extension = mimetypes.guess_extension(filetype) or ".txt"
 
     r = requests.post("https://api.paste.gg/v1/pastes",
                       headers={"Content-Type": "application/json"},
