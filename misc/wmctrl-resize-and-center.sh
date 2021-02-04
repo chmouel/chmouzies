@@ -39,8 +39,14 @@ elif [[ ${X} > ${currentx} ]];then
 elif [[ -n ${rotatearound} && -e /tmp/previous ]]; then
     previous=$(cat ${PREVIOUS})
     if [[ ${previous} == "gauche" ]];then
+        # Go a droite
+        # xte 'keydown Super_L' 'keydown Shift_L' 'keydown Right' 'keyup Right' 'keyup Shift_L' 'keyup Super_L'
+        # exit 0
         X=${SCREEN_WIDTH}
     elif [[ ${previous} == "droite" ]];then
+        # Go a gauche
+        # xte 'keydown Super_L' 'keydown Shift_L' 'keydown Left' 'keyup Left' 'keyup Shift_L' 'keyup Super_L'
+        # exit 0
         X=0
     fi
 fi
