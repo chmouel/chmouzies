@@ -55,7 +55,7 @@ class Report:
         self.github_cnx = github.Github(token)
 
     def format_pr(self, pr):
-        return f"{pr.title} - @{pr.user.login} - {pr.html_url}"
+        return f"* {pr.title} - #{pr.number} {pr.html_url}"
 
     def get_merged_prs(self) -> str:
         ret = ""

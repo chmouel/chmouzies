@@ -1,4 +1,5 @@
-#! /bin/sh
+#!/usr/bin/env bash
+
 
 for source in "$@"; do
     case $source in
@@ -11,6 +12,7 @@ for source in "$@"; do
     *.json)
         jq -C '.' ${source};;
     *.md|*.yaml|*.yml)
+        type -p mdcat && { mdcat ${source} ; exit $? ;}
         pygmentize -O colorful  "$source";;
     # *) source-highlight --failsafe --infer-lang -f esc --style-file=esc.style -i "$source" ;;
     *)  chroma --formatter="terminal256" --style=vim ${source} ;;
