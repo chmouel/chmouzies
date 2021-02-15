@@ -32,9 +32,9 @@ H=$(( $SCREEN_HEIGHT - 2 * $TOPMARGIN ))
 # moving to the center
 X=$(( $SCREEN_WIDTH / 3 ))
 
-if [[ ${currentx} > ${X} ]];then
+if [[ ${currentx} -ge ${X} ]];then
     echo "droite" > ${PREVIOUS}
-elif [[ ${X} > ${currentx} ]];then
+elif [[ ${X} -ge ${currentx} ]];then
     echo "gauche" > ${PREVIOUS}
 elif [[ -n ${rotatearound} && -e /tmp/previous ]]; then
     previous=$(cat ${PREVIOUS})
