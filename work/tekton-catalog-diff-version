@@ -7,8 +7,8 @@ upstream=upstream
 PR=${1}
 
 [[ ${PR} != *tektoncd/catalog* ]] && {
-    echo "i need the first argument to be a tekton/catalog PR"
-    exit
+    echo "i need the first argument to be a tekton/catalog PR, ie.: https://github.com/tektoncd/catalog/pull/1"
+    exit 1
 }
 
 cd "$GOPATH/src/github.com/tektoncd/catalog"
