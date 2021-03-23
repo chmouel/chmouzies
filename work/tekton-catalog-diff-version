@@ -4,14 +4,16 @@ set -e
 # default upstream branch called upstream may be origin for you
 upstream=upstream
 
-[[ ${1} != *tektoncd/catalog* ]] && {
-    echo "i need the first argument to be a tekton/catalog"
+PR=${1}
+
+[[ ${PR} != *tektoncd/catalog* ]] && {
+    echo "i need the first argument to be a tekton/catalog PR"
     exit
 }
 
 cd "$GOPATH/src/github.com/tektoncd/catalog"
 
-hub checkout "${1}"
+hub checkout "${PR}"
 
 changed_task_version=$(git diff-tree --no-commit-id --name-only -r $(git rev-parse --abbrev-ref HEAD)|grep '^task/'| \
                            sed 's,\([^/]*/[^/]*/[^/]*\).*,\1,'|sort -u)
@@ -32,8 +34,10 @@ task_version=$(basename ${changed_task_version})
 
 previous_task_version=$(ls task/${task_name}|sort -ur|grep '^[0-9]*\.[0-9]*'|grep -v ${task_version} | head -1)
 
+difffilename=/tmp/catalog-review-${task_name}-${task_version}.diff
+
 diff -urN task/${task_name}/${previous_task_version} task/${task_name}/${task_version} | \
-    tee /tmp/catalog-review-${task_name}-${task_name}.diff
+    tee ${difffilename}
 
 type -p pastegg >/dev/null 2>/dev/null && \
-    pastegg -f /tmp/catalog-review-${task_name}-${task_name}.diff | tee /tmp/catalog-review-${task_name}-${task_name}.pasteurl
+    pastegg -f ${difffilename} | tee ${difffilename/.diff/.pasteurl}
