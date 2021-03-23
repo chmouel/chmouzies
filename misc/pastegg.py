@@ -8,6 +8,7 @@ If that doesn't work it will ask for the content type via a rofi menu.
 It will open a webbrowser at the end (or print it on stdout) the resulted
 url.
 """
+import argparse
 import datetime
 import json
 import mimetypes
@@ -164,7 +165,18 @@ def pasteit(text=None):
 
 
 if __name__ == '__main__':
-    grabbed = pasteit()
+    text = None
+    parser = argparse.ArgumentParser(description='')
+    parser.add_argument("-f", dest="file")
+    args = parser.parse_args()
+
+    if args.file:
+        if not os.path.exists(args.file):
+            print("{args.file} does not exist")
+            sys.exit(1)
+        text = open(args.file).read()
+
+    grabbed = pasteit(text)
     if not grabbed:
         sys.exit(0)
     # runcmd(f"echo {grabbed}|xsel -i -b")
