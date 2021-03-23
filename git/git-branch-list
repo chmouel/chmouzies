@@ -8,6 +8,8 @@ showstatus=
 nocolor=
 fzf=
 
+export TERM=xterm-color
+
 while getopts "kscfd" o; do
     case "${o}" in
         f)
