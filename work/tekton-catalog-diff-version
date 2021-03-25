@@ -32,7 +32,8 @@ fi
 task_name=$(basename $(dirname ${changed_task_version}))
 task_version=$(basename ${changed_task_version})
 
-previous_task_version=$(ls task/${task_name}|sort -ur|grep '^[0-9]*\.[0-9]*'|grep -v ${task_version} | head -1)
+# previous_task_version=$(ls task/${task_name}|sort -ur|grep '^[0-9]*\.[0-9]*'|grep -v ${task_version} | head -1)
+previous_task_version=$(find task/${task_name} -maxdepth 1 -regex '.*/[0-9]\.[0-9]$' \! -name "${task_version}" -printf "%f\n"|sort -run|head -1)
 
 difffilename=/tmp/catalog-review-${task_name}-${task_version}.diff
 
