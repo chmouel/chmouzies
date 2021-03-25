@@ -1,12 +1,36 @@
 #!/usr/bin/env bash
 set -e
 
-# default upstream branch called upstream may be origin for you
-upstream=upstream
+# by default autodetect, set it up here if you like
+upstream=
+
+# Wether to delete the checkout branch, set it to yes or use the -d option
+deletecheckout=
+
+currentbranch=$(git symbolic-ref -q HEAD);currentbranch=${currentbranch#refs/heads/}
+
+if git --no-pager remote |grep -q upstream;then
+    upstream=upstream
+elif [[ -z ${upstream} ]];then
+    upstream=origin
+fi
+
+while getopts "d" o; do
+    case "${o}" in
+        d)
+            deletecheckout="yes"
+            ;;
+        *)
+            echo "Invalid option: ${OPTARG}"; exit 1;
+            ;;
+    esac
+done
+shift $((OPTIND-1))
+
 
 PR=${1}
 
-[[ ${PR} != *tektoncd/catalog* ]] && {
+[[ ${PR} != *tektoncd/catalog/pull* ]] && {
     echo "i need the first argument to be a tekton/catalog PR, ie.: https://github.com/tektoncd/catalog/pull/1"
     exit 1
 }
