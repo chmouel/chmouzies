@@ -92,12 +92,15 @@ def runcmd(cmd):
     return ret.stdout.decode()
 
 
-def detect_filetype(text):
+def detect_filetype(filetext):
     """Try a lot of different ways to guess mimetypes, faillign back to a rofi
     menu"""
-    contentfile = tempfile.NamedTemporaryFile(delete=False).name
     magicfile = tempfile.NamedTemporaryFile(delete=False).name
-    open(contentfile, 'w').write(text)
+    if not os.path.exists(filetext):
+        contentfile = tempfile.NamedTemporaryFile(delete=False).name
+        open(contentfile, 'w').write(filetext)
+    else:
+        contentfile = filetext
     open(magicfile, 'w').write(RAW_PROGRAMMING_MAGIC)
     ret = runcmd(f"file -m/usr/share/file/magic:{magicfile} -b {contentfile}")
     for ft in MAP_FILETYPE_STRING_TO_FILENAME:
@@ -112,24 +115,31 @@ def detect_filetype(text):
             "sed -n '/python-code/d;/^#/d;/^$/d;s/[ \t].*$//;p' /etc/mime.types |rofi -dmenu -select text/plain"
         )
     os.remove(magicfile)
-    os.remove(contentfile)
+    if filetext != contentfile:
+        os.remove(contentfile)
     return ret
 
 
-def pasteit(text=None):
-    if not text:
-        text = runcmd("xsel")
-    filetype = detect_filetype(text).strip()
+def pasteit(filetext=None, description=None):
+    if not filetext:
+        filetext = runcmd("xsel")
+    filetype = detect_filetype(filetext).strip()
     if filetype.startswith("."):
         extension = filetype
     else:
         extension = mimetypes.guess_extension(filetype) or ".txt"
 
+    if os.path.exists(filetext):
+        filename = os.path.basename(filetext)
+        filetext = open(filetext).read()
+    else:
+        filename = f"paste{extension}"
+
     r = requests.post("https://api.paste.gg/v1/pastes",
                       headers={"Content-Type": "application/json"},
                       json={
                           "name":
-                          f'Paste from {os.environ["USER"]}',
+                          description,
                           "visibility":
                           "unlisted",
                           "expires":
@@ -137,10 +147,10 @@ def pasteit(text=None):
                            datetime.timedelta(hours=EXPIRATION_HOURS)
                            ).strftime("%Y-%m-%dT%H:%M:%SZ"),
                           "files": [{
-                              "name": f"paste{extension}",
+                              "name": filename,
                               "content": {
                                   "format": "text",
-                                  "value": text.encode()
+                                  "value": filetext.encode()
                               }
                           }]
                       })
@@ -168,15 +178,13 @@ if __name__ == '__main__':
     text = None
     parser = argparse.ArgumentParser(description='')
     parser.add_argument("-f", dest="file")
+    parser.add_argument("-d",
+                        dest="description",
+                        default=f'Paste from {os.environ["USER"]}',
+                        help="Description of paste")
     args = parser.parse_args()
 
-    if args.file:
-        if not os.path.exists(args.file):
-            print("{args.file} does not exist")
-            sys.exit(1)
-        text = open(args.file).read()
-
-    grabbed = pasteit(text)
+    grabbed = pasteit(args.file, args.description)
     if not grabbed:
         sys.exit(0)
     # runcmd(f"echo {grabbed}|xsel -i -b")
