@@ -39,7 +39,10 @@ cd "$GOPATH/src/github.com/tektoncd/catalog"
 
 hub checkout "${PR}"
 
-changed_task_version=$(git diff-tree --no-commit-id --name-only -r $(git rev-parse --abbrev-ref HEAD)|grep '^task/'| \
+newbranch=$(git symbolic-ref -q HEAD);newbranch=${newbranch#refs/heads/}
+
+changed_task_version=$(git diff-tree --no-commit-id --name-only -r \
+                           $(git rev-parse --abbrev-ref HEAD)|grep '^task/'| \
                            sed 's,\([^/]*/[^/]*/[^/]*\).*,\1,'|sort -u)
 
 if [[ -z ${changed_task_version} ]];then
@@ -65,4 +68,12 @@ diff -urN task/${task_name}/${previous_task_version} task/${task_name}/${task_ve
     tee ${difffilename}
 
 type -p pastegg >/dev/null 2>/dev/null && \
-    pastegg -f ${difffilename} | tee ${difffilename/.diff/.pasteurl}
+    pastegg -n \
+            "Diff task ${task_name} between version ${previous_task_version} and new version ${task_version}" \
+            -d "PR: ${PR}" \
+            -f ${difffilename} | tee ${difffilename/.diff/.pasteurl}
+
+if [[ -n ${deletecheckout} && ${newbranch} != ${currentbranch} ]];then
+    git checkout ${currentbranch}
+    git branch -D ${newbranch}
+fi
