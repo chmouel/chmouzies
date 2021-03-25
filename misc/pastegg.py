@@ -120,7 +120,7 @@ def detect_filetype(filetext):
     return ret
 
 
-def pasteit(filetext=None, description=None):
+def pasteit(filetext=None, name='', description=''):
     if not filetext:
         filetext = runcmd("xsel")
     filetype = detect_filetype(filetext).strip()
@@ -139,6 +139,8 @@ def pasteit(filetext=None, description=None):
                       headers={"Content-Type": "application/json"},
                       json={
                           "name":
+                          name,
+                          "description":
                           description,
                           "visibility":
                           "unlisted",
@@ -178,13 +180,14 @@ if __name__ == '__main__':
     text = None
     parser = argparse.ArgumentParser(description='')
     parser.add_argument("-f", dest="file")
-    parser.add_argument("-d",
-                        dest="description",
-                        default=f'Paste from {os.environ["USER"]}',
-                        help="Description of paste")
+    parser.add_argument("-n",
+                        dest="name",
+                        default=f'Paste from {os.environ["USER"]}')
+    parser.add_argument("-d", dest="description", default="")
+
     args = parser.parse_args()
 
-    grabbed = pasteit(args.file, args.description)
+    grabbed = pasteit(args.file, args.name, args.description)
     if not grabbed:
         sys.exit(0)
     # runcmd(f"echo {grabbed}|xsel -i -b")
