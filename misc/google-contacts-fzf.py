@@ -17,12 +17,24 @@ import argparse
 import json
 import os
 import subprocess
+import sys
 import tempfile
 
-jeez = json.load(open("/tmp/a.json"))
+
+def get_goobook_json():
+    cmd = "goobook dump_contacts"
+    goobook = subprocess.run(cmd,
+                             shell=True,
+                             stderr=subprocess.PIPE,
+                             stdout=subprocess.PIPE)
+    if goobook.returncode != 0:
+        print("i could not run '%s'" % (cmd))
+        sys.exit(1)
+    return json.loads(goobook.stdout.decode().strip())
 
 
 def show_names():
+    jeez = get_goobook_json()
     allnames = []
     for i in jeez:
         if 'names' in i:
