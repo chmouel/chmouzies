@@ -1,27 +1,92 @@
-#!/bin/bash
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# Author: Chmouel Boudjnah <chmouel@chmouel.com>
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+import argparse
+import base64
+import json
+import subprocess
+import sys
+import urllib.request
 
-CATALOG=$(readlink -f $GOPATH/src/github.com/tektoncd/catalog)
+MAIN_BRANCH = "main"
 
-ALL_TASKS=$@
-if [[ -z "${ALL_TASKS}" ]];then
-	ALL_TASKS=$(echo ${CATALOG}/task/*/[0-9].[0-9]|tr ' ' '\n'|sed -e "s,${CATALOG}/task/,,"|fzf -m -1 -0)
-fi
 
-install_tasks=""
-for i in ${ALL_TASKS};do
-	[[ ${i} =~ ([^/]*)/(.*) ]] && { 
-		[[ -d ${CATALOG}/task/${BASH_REMATCH[1]}/${BASH_REMATCH[2]} ]] || { echo "Could not find ${i}"; exit 1 ;}
-		install_tasks="$install_tasks ${CATALOG}/task/${BASH_REMATCH[1]}/${BASH_REMATCH[2]}/${BASH_REMATCH[1]}.yaml"; 
-		continue 
-	}
-	_all_version=( $( echo $CATALOG/task/$i/[0-9].[0-9]/${i}.yaml ))
-	lasttask=${_all_version[*]:(-1)}
-	[[ -f ${lasttask} ]] || { echo "Could not find ${i}"; exit 1 ;}
-	install_tasks="$install_tasks ${lasttask}"
-done
+def execute(command):
+    """Execute commmand"""
+    result = subprocess.run(["/bin/sh", "-c", command],
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT,
+                            check=True)
+    return result.stdout.decode().strip()
 
-for i in  ${install_tasks};do
-	echo "${i}"
-done
 
-#for i in git-clone yaml-lint pylint black shellcheck mypy-lint;do latest=(; echo "${latest[-1]}";done
+def make_request(url):
+    try:
+        token = execute("git config --get github.token")
+    except (subprocess.CalledProcessError):
+        print(
+            """You need to setup a github token in your gitconfig in section :
+
+[github]
+token=THETOKEN
+
+i.e from CLI: it config --global --add github.token THETOKEN
+
+make sure that gitconfig is kept secrets via an include file or others.""")
+        sys.exit(1)
+    req = urllib.request.Request(url)
+    req.add_header("Authorization", f"token {token}")
+    return json.load(urllib.request.urlopen(req))
+
+
+def get_task(task_name):
+    tree_taskdir = make_request(
+        f"https://api.github.com/repos/tektoncd/catalog/git/trees/{MAIN_BRANCH}"
+    )
+
+    url = [x["url"] for x in tree_taskdir["tree"] if x["path"] == "task"]
+    if not url:
+        raise Exception("Cannot find task directory???")
+
+    taskname_tree = make_request(url[0])
+    task_url = [
+        x["url"] for x in taskname_tree["tree"] if x["path"] == task_name
+    ]
+    if not task_url:
+        raise Exception(f"Cannot find {task_name} in catalog???")
+
+    task_tree = make_request(task_url[0])
+    task_tree['tree'].sort(key=lambda s: list(map(int, s['path'].split('.'))),
+                           reverse=True)
+    all_versions_of_task = make_request(task_tree['tree'][0]["url"])
+    print()
+    raw_url = [
+        x["url"] for x in all_versions_of_task["tree"]
+        if x["path"] == task_name + ".yaml"
+    ]
+
+    if not raw_url:
+        raise Exception(f"Cannot find task {task_name}.yaml in directory")
+
+    return (base64.b64decode(make_request(raw_url[0])["content"]).decode())
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description='Get latest task from catalog, eg: kubectl apply -f <(./tekton-catalog-get git-clone)'
+    )
+    parser.add_argument('task_name')
+    args = parser.parse_args()
+    print(get_task(args.task_name))
