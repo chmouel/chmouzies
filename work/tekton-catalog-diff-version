@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
+cd "$GOPATH/src/github.com/tektoncd/catalog"
+
 # by default autodetect, set it up here if you like
 upstream=
 
@@ -35,7 +37,6 @@ PR=${1}
     exit 1
 }
 
-cd "$GOPATH/src/github.com/tektoncd/catalog"
 
 hub checkout "${PR}"
 
@@ -54,6 +55,11 @@ check_if_task_version_on_main=$(git ls-tree -r ${upstream}/main --name-only ${ch
 if [[ -n ${check_if_task_version_on_main} ]];then
     echo "Not a new version, since '${changed_task_version}' is already in main"
     exit 0
+fi
+
+if [[ $(basename ${changed_task_version})  == 0.1 ]];then
+    echo "New task 0.1, skipping the diff"
+    exit
 fi
 
 task_name=$(basename $(dirname ${changed_task_version}))
